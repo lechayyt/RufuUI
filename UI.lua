@@ -1,72 +1,64 @@
 --[[
-	██ RUFU UI v5.0 — ИДЕАЛЬНЫЙ КОНСТРУКТОР (ВСЕ БАГИ ИСПРАВЛЕНЫ)
-	Скопируй ВЕСЬ этот код в LocalScript. 
-	Меню откроется само при запуске игры (или на RightShift).
+	██ RUFU UI v3.0 [GITHUB EDITION]
+	Исправлены все баги: Блюр не залипает, Аватарка по центру, Тема красит фон.
 ]]
 
--- ═══════════════ СЕРВИСЫ ═══════════════
-local Players           = game:GetService("Players")
-local TweenService      = game:GetService("TweenService")
-local UserInputService  = game:GetService("UserInputService")
-local RunService        = game:GetService("RunService")
-local Lighting          = game:GetService("Lighting")
-local Debris            = game:GetService("Debris")
-local HttpService       = game:GetService("HttpService")
-local ContentProvider   = game:GetService("ContentProvider")
-local Stats             = game:GetService("Stats")
-local TextService       = game:GetService("TextService")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local Debris = game:GetService("Debris")
+local HttpService = game:GetService("HttpService")
+local ContentProvider = game:GetService("ContentProvider")
+local Stats = game:GetService("Stats")
+local TextService = game:GetService("TextService")
 
 local LocalPlayer = Players.LocalPlayer
-local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Настройки окна
+-- ═══════════ НАСТРОЙКИ ═══════════
 local CONFIG = {
-	Title       = "RUFU HUB",
-	Version     = "v5.0",
-	ToggleKey   = Enum.KeyCode.RightShift,
-	Size        = Vector2.new(500, 340),
-	MinSize     = Vector2.new(430, 250),
-	MaxSize     = Vector2.new(780, 640),
-	Accent      = Color3.fromRGB(96, 150, 255),
-	Accent2     = Color3.fromRGB(146, 122, 255),
-	Blur        = 14,
-	Dim         = 0.12,
-	Scale       = 1,
-	OpenOnStart = true, -- Меню откроется само
-	Sounds      = false,
-	Watermark   = true,
-	BindHud     = true,
-	Motion      = 1,
-	AutoSave    = true,
-	Folder      = "RufuHub",
+	Title = "RUFU HUB", Version = "v3.0", ToggleKey = Enum.KeyCode.RightShift,
+	Size = Vector2.new(500, 340), MinSize = Vector2.new(430, 250), MaxSize = Vector2.new(780, 640),
+	Accent = Color3.fromRGB(96, 150, 255), Accent2 = Color3.fromRGB(146, 122, 255),
+	Blur = 14, Dim = 0.12, Scale = 1, OpenOnStart = true, Sounds = false,
+	Watermark = true, BindHud = true, Motion = 1, AutoSave = true, Folder = "RufuHub",
 }
 
 local T = {
-	Bg = Color3.fromRGB(14, 15, 20), Panel = Color3.fromRGB(22, 24, 31), Side = Color3.fromRGB(18, 20, 26),
-	Card = Color3.fromRGB(38, 41, 52), Track = Color3.fromRGB(60, 64, 78), Text = Color3.fromRGB(238, 240, 247),
-	Sub = Color3.fromRGB(146, 152, 168), Dim = Color3.fromRGB(104, 110, 126), White = Color3.fromRGB(255, 255, 255),
-	Good = Color3.fromRGB(80, 220, 140), Warn = Color3.fromRGB(255, 190, 90), Bad = Color3.fromRGB(255, 96, 110),
+	Bg=Color3.fromRGB(14,15,20), Panel=Color3.fromRGB(22,24,31), Side=Color3.fromRGB(18,20,26),
+	Card=Color3.fromRGB(38,41,52), Track=Color3.fromRGB(60,64,78), Text=Color3.fromRGB(238,240,247),
+	Sub=Color3.fromRGB(146,152,168), Dim=Color3.fromRGB(104,110,126), White=Color3.fromRGB(255,255,255),
+	Good=Color3.fromRGB(80,220,140), Warn=Color3.fromRGB(255,190,90), Bad=Color3.fromRGB(255,96,110),
 }
 local ACCENT, ACCENT2 = CONFIG.Accent, CONFIG.Accent2
 
--- ═══════════════ ЯДРО (ИСПРАВЛЕН БЛЮР И АНИМАЦИИ) ═══════════════
+-- ═══════════ ЯДРО (ФИКС БЛЮРА) ═══════════
 local Anim = { mul = CONFIG.Motion, off = false }
 local loops = {}
-local activeTweens = setmetatable({}, { __mode = "k" })
+local activeTweens = setmetatable({}, { __mode = "k" }) -- Реестр для отмены старых твинов
+
 local function tween(obj, time, style, dir, props)
 	local reg = activeTweens[obj]
 	if not reg then reg = {}; activeTweens[obj] = reg end
-	for prop in pairs(props) do local old = reg[prop]; if old then pcall(function() old:Cancel() end); reg[prop] = nil end end
-	local t = TweenService:Create(obj, TweenInfo.new(Anim.off and 0.001 or math.max(0.001, time * Anim.mul), style or Enum.EasingStyle.Quint, dir or Enum.EasingDirection.Out), props)
+	for prop in pairs(props) do
+		local old = reg[prop]
+		if old then pcall(function() old:Cancel() end); reg[prop] = nil end
+	end
+	local t = TweenService:Create(obj, TweenInfo.new(Anim.off and 0.001 or math.max(0.001, time * Anim.mul),
+		style or Enum.EasingStyle.Quint, dir or Enum.EasingDirection.Out), props)
 	for prop in pairs(props) do reg[prop] = t end
-	local conn; conn = t.Completed:Connect(function() conn:Disconnect(); for prop in pairs(props) do if reg[prop] == t then reg[prop] = nil end end end)
+	local conn; conn = t.Completed:Connect(function() conn:Disconnect(); for prop in pairs(props) do if reg[prop]==t then reg[prop]=nil end end end)
 	t:Play(); return t
 end
+
 local function loop(obj, time, style, props, reverse)
-	local spec = { obj = obj, time = time, style = style, props = props, rev = reverse }; loops[#loops + 1] = spec
+	local spec = { obj=obj, time=time, style=style, props=props, rev=reverse }; loops[#loops+1] = spec
 	if not Anim.off then spec.t = TweenService:Create(obj, TweenInfo.new(time, style or Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, reverse and true or false), props); spec.t:Play() end
 	return spec
 end
+
 local function setMotionEnabled(on)
 	Anim.off = not on
 	for _, s in ipairs(loops) do
@@ -75,7 +67,7 @@ local function setMotionEnabled(on)
 	end
 end
 
--- ═══════════════ БАЗОВЫЕ ФУНКЦИИ ═══════════════
+-- ═══════════ ХЕЛПЕРЫ ═══════════
 local function new(class, props, children)
 	local obj = Instance.new(class); local parent
 	for k, v in pairs(props or {}) do if k == "Parent" then parent = v else obj[k] = v end end
@@ -86,18 +78,18 @@ local function corner(o, r) return new("UICorner", { CornerRadius = UDim.new(0, 
 local function stroke(o, tr, th, col) return new("UIStroke", { Color = col or T.White, Transparency = tr or 0.9, Thickness = th or 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = o }) end
 local function pad(o, l, r, t, b) return new("UIPadding", { PaddingLeft = UDim.new(0, l or 0), PaddingRight = UDim.new(0, r or 0), PaddingTop = UDim.new(0, t or 0), PaddingBottom = UDim.new(0, b or 0), Parent = o }) end
 local function text(props)
-	local d = { BackgroundTransparency = 1, Font = Enum.Font.GothamMedium, Text = "", TextColor3 = T.Text, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, Size = UDim2.fromScale(1, 1), TextTruncate = Enum.TextTruncate.AtEnd }
+	local d = { BackgroundTransparency=1, Font=Enum.Font.GothamMedium, Text="", TextColor3=T.Text, TextSize=12, TextXAlignment=Enum.TextXAlignment.Left, TextYAlignment=Enum.TextYAlignment.Center, Size=UDim2.fromScale(1,1), TextTruncate=Enum.TextTruncate.AtEnd }
 	for k, v in pairs(props) do d[k] = v end; return new("TextLabel", d)
 end
 local accentSetters, glassSetters = {}, {}
-local function accent(fn) accentSetters[#accentSetters + 1] = fn end
+local function accent(fn) accentSetters[#accentSetters+1] = fn end
 local conns = {}
-local function connect(signal, fn) local c = signal:Connect(fn); conns[#conns + 1] = c; return c end
-local function lerp(a, b, t) return a + (b - a) * t end
+local function connect(signal, fn) local c = signal:Connect(fn); conns[#conns+1] = c; return c end
+local function lerp(a, b, t) return a + (b-a)*t end
 local function clamp(v, a, b) return math.max(a, math.min(b, v)) end
 local function round(v) return math.floor(v + 0.5) end
 
--- ═══════════════ ИКОНКИ ═══════════════
+-- ═══════════ ИКОНКИ ═══════════
 local ICONS = {
 	grid={f={{1,1,5,5,1.5},{8,1,5,5,1.5},{1,8,5,5,1.5},{8,8,5,5,1.5}}}, eye={r={{1,1,12,12,1.4}},f={{5,5,4,4,2}}},
 	misc={f={{1,2,12,2,1},{1,6,8,2,1},{1,10,10,2,1}}}, sliders={f={{1,3,12,2,1},{1,9,12,2,1},{2,1.5,5,5,3},{7,7.5,5,5,3}}},
@@ -118,7 +110,7 @@ local function icon(kind, parent, color, pos, size)
 	return box, recolor
 end
 
--- ═══════════════ АВАТАРКИ (ИСПРАВЛЕНО СМЕЩЕНИЕ) ═══════════════
+-- ═══════════ АВАТАРКИ (ФИКС ПОЗИЦИИ) ═══════════
 local function setAvatar(img, userId, px)
 	px = px or 150; img.ScaleType = Enum.ScaleType.Crop; img.ImageTransparency = 1
 	img.Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=%d&h=%d", userId, px, px)
@@ -126,27 +118,22 @@ local function setAvatar(img, userId, px)
 		pcall(function() ContentProvider:PreloadAsync({ img }) end)
 		if not img.Parent then return end
 		tween(img, 0.45, Enum.EasingStyle.Quad, nil, { ImageTransparency = 0 })
-		for i = 1, 3 do local ok, url, ready = pcall(function() return Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150) end); if ok and url and ready then if img.Parent then img.Image = url end return end; task.wait(0.5 * i) end
+		for i = 1, 3 do local ok, url, ready = pcall(function() return Players:GetUserThumbnailAsync(userId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150) end); if ok and url and ready then if img.Parent then img.Image = url end return end; task.wait(0.5*i) end
 	end)
 end
 
--- ═══════════════ СОХРАНЕНИЕ ═══════════════
+-- ═══════════ ХРАНИЛИЩЕ ═══════════
 local function isfn(f) return typeof(f) == "function" end
 local FS = { available = isfn(writefile) and isfn(readfile) }
 local memory = _G.__RufuFiles or {}; _G.__RufuFiles = memory
 pcall(function() if FS.available and isfn(makefolder) and isfn(isfolder) and not isfolder(CONFIG.Folder) then makefolder(CONFIG.Folder) end end)
 local function fpath(name) return CONFIG.Folder .. "/" .. name .. ".json" end
-function FS.write(name, data) if FS.available then local ok = pcall(function() writefile(fpath(name), data) end); if ok then return true end end memory[name] = data; return false end
-function FS.read(name) if FS.available and isfn(isfile) then local ok, data = pcall(function() if isfile(fpath(name)) then return readfile(fpath(name)) end return nil end); if ok and data then return data end end return memory[name] end
-function FS.list()
-	local out = {}
-	if FS.available and isfn(listfiles) then pcall(function() for _, f in ipairs(listfiles(CONFIG.Folder)) do local n = string.match(f, "([^/\\]+)%.json$"); if n then out[#out+1] = n end end end) end
-	for n in pairs(memory) do local found = false; for _, v in ipairs(out) do if v == n then found = true end end; if not found then out[#out+1] = n end end
-	table.sort(out); return out
-end
+function FS.write(name, data) if FS.available then local ok = pcall(function() writefile(fpath(name), data) end); if ok then return true end end; memory[name] = data; return false end
+function FS.read(name) if FS.available and isfn(isfile) then local ok, data = pcall(function() if isfile(fpath(name)) then return readfile(fpath(name)) end return nil end); if ok and data then return data end end; return memory[name] end
+function FS.list() local out = {}; if FS.available and isfn(listfiles) then pcall(function() for _, f in ipairs(listfiles(CONFIG.Folder)) do local n = string.match(f, "([^/\\]+)%.json$"); if n then out[#out+1] = n end end end) end; for n in pairs(memory) do local found = false; for _, v in ipairs(out) do if v == n then found = true end end; if not found then out[#out+1] = n end end; table.sort(out); return out end
 function FS.delete(name) memory[name] = nil; if FS.available and isfn(delfile) then pcall(function() delfile(fpath(name)) end) end end
 
--- ═══════════════ ГЛАВНОЕ ОКНО ═══════════════
+-- ═══════════ КАРКАС GUI ═══════════
 if _G.__RufuUI and _G.__RufuUI.Destroy then pcall(function() _G.__RufuUI:Destroy() end) end
 local W, H = CONFIG.Size.X, CONFIG.Size.Y; local MARGIN = 40
 local gui = new("ScreenGui", { Name="RufuUI", ResetOnSpawn=false, IgnoreGuiInset=true, AutoLocalize=false, DisplayOrder=999, ZIndexBehavior=Enum.ZIndexBehavior.Sibling, Enabled=true, Parent=PlayerGui })
@@ -164,7 +151,7 @@ local function layoutShadows(h, instant) for _, s in ipairs(shadows) do local si
 local panel = new("Frame", { Name="Panel", BackgroundColor3=T.Panel, BackgroundTransparency=0.12, BorderSizePixel=0, ClipsDescendants=true, ZIndex=2, Position=UDim2.fromOffset(MARGIN,MARGIN), Size=UDim2.fromOffset(W,H), Parent=root })
 corner(panel, 14); local panelStroke = stroke(panel, 0.86, 1.2)
 local panelGrad = new("UIGradient", { Rotation=115, Color=ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromRGB(40,43,56)), ColorSequenceKeypoint.new(0.55, T.Panel), ColorSequenceKeypoint.new(1, Color3.fromRGB(15,16,21)) }), Parent=panel })
-accent(function(c) local h, s, v = Color3.toHSV(c); tween(panelGrad, 0.4, nil, nil, { Color=ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromHSV(h, clamp(s*0.4,0,1), 0.22)), ColorSequenceKeypoint.new(0.55, Color3.fromHSV(h, clamp(s*0.4,0,1), 0.12)), ColorSequenceKeypoint.new(1, Color3.fromHSV(h, clamp(s*0.5,0,1), 0.06)) }) }) end)
+accent(function(c) local h,s,v = Color3.toHSV(c); tween(panelGrad, 0.4, nil, nil, { Color=ColorSequence.new({ ColorSequenceKeypoint.new(0, Color3.fromHSV(h,clamp(s*0.4,0,1),0.22)), ColorSequenceKeypoint.new(0.55, Color3.fromHSV(h,clamp(s*0.4,0,1),0.12)), ColorSequenceKeypoint.new(1, Color3.fromHSV(h,clamp(s*0.5,0,1),0.06)) }) }) end)
 glassSetters[#glassSetters+1] = function(v) tween(panel, 0.3, nil, nil, { BackgroundTransparency=v }); tween(panelStroke, 0.3, nil, nil, { Transparency=clamp(v+0.74,0,0.95) }) end
 
 local sheenGrad = new("UIGradient", { Transparency=NumberSequence.new({ NumberSequenceKeypoint.new(0,1), NumberSequenceKeypoint.new(0.42,1), NumberSequenceKeypoint.new(0.5,0.15), NumberSequenceKeypoint.new(0.58,1), NumberSequenceKeypoint.new(1,1) }), Color=ColorSequence.new(T.White, ACCENT), Offset=Vector2.new(-1,0) })
@@ -192,7 +179,7 @@ local TAB_H, TAB_GAP = 32, 4
 local pill = new("Frame", { Name="Pill", BackgroundColor3=T.White, BackgroundTransparency=0.9, BorderSizePixel=0, Size=UDim2.new(1,0,0,TAB_H), Position=UDim2.fromOffset(0,0), ZIndex=1, Parent=tabsBox }); corner(pill, 9); stroke(pill, 0.9, 1)
 local pillBar = new("Frame", { BackgroundColor3=ACCENT, BorderSizePixel=0, AnchorPoint=Vector2.new(0,0.5), Position=UDim2.new(0,0,0.5,0), Size=UDim2.fromOffset(3,15), Parent=pill }); corner(pillBar, 2); accent(function(c) tween(pillBar, 0.35, nil, nil, { BackgroundColor3=c }) end)
 
--- Аватарка (Исправлено смещение влево)
+-- АВАТАРКА (ИСПРАВЛЕНО СМЕЩЕНИЕ)
 local profile = new("CanvasGroup", { Name="Profile", BackgroundTransparency=1, GroupTransparency=0, ZIndex=3, AnchorPoint=Vector2.new(0,1), Position=UDim2.new(0,12,1,-10), Size=UDim2.new(1,-24,0,34), Parent=side })
 local avatarHolder = new("Frame", { BackgroundColor3=T.Card, BackgroundTransparency=0.25, BorderSizePixel=0, ZIndex=2, AnchorPoint=Vector2.new(0.5,0.5), Size=UDim2.fromOffset(28,28), Position=UDim2.fromOffset(16,17), Parent=profile })
 corner(avatarHolder, 14)
@@ -288,8 +275,8 @@ local palList = new("ScrollingFrame", { BackgroundTransparency=1, BorderSizePixe
 new("UIListLayout", { Padding=UDim.new(0,3), SortOrder=Enum.SortOrder.LayoutOrder, Parent=palList })
 text({ Text="↑↓ выбор   Enter выполнить   Esc закрыть", TextSize=9, TextColor3=T.Dim, AnchorPoint=Vector2.new(0,1), Position=UDim2.new(0,12,1,-8), Size=UDim2.new(1,-24,0,14), Parent=palBox })
 
--- ═══════════════ СОСТОЯНИЕ ═══════════════
-local Window = { Flags = {}, Tabs = {}, _open = false }; _G.__RufuUI = Window
+-- ═══════════ СОСТОЯНИЕ ═══════════
+local Window = { Flags={}, Tabs={}, _open=false }; _G.__RufuUI = Window
 local userScale, baseScale = CONFIG.Scale, CONFIG.Scale
 local targetPos, curPos = Vector2.new(0,0), Vector2.new(0,0)
 local dragging, moved, resizing, minimized = false, false, false, false
@@ -313,7 +300,7 @@ local function ripple(obj, color) local r = new("Frame", { BackgroundColor3=colo
 local function shake(obj, amt) local base = obj.Position; task.spawn(function() for i=1,4 do local off=(i%2==0) and -(amt or 4) or (amt or 4); tween(obj, 0.05, Enum.EasingStyle.Quad, nil, { Position=base+UDim2.fromOffset(off,0) }); task.wait(0.05) end; tween(obj, 0.12, Enum.EasingStyle.Quad, nil, { Position=base }) end) end
 local function hoverize(card, b, h) connect(card.MouseEnter, function() tween(card, 0.18, Enum.EasingStyle.Quad, nil, { BackgroundTransparency=h }) end); connect(card.MouseLeave, function() tween(card, 0.22, Enum.EasingStyle.Quad, nil, { BackgroundTransparency=b }) end) end
 
--- ═══════════════ ТОСТЫ ═══════════════
+-- ═══════════ ТОСТЫ ═══════════
 do
 	local KIND = { info="info", good="check", warn="warn", bad="close" }
 	local function kindColor(k) if k=="good" then return T.Good elseif k=="warn" then return T.Warn elseif k=="bad" then return T.Bad end return ACCENT end
@@ -340,7 +327,7 @@ do
 	end
 end
 
--- ═══════════════ ТУЛТИПЫ ═══════════════
+-- ═══════════ ТУЛТИПЫ ═══════════
 local hideTooltip, showTooltip, attachTooltip
 do
 	local tok = 0
@@ -351,7 +338,7 @@ do
 	attachTooltip(logoBtn, "Сменить акцент"); attachTooltip(avatarHolder, LocalPlayer.Name.." · id "..LocalPlayer.UserId); attachTooltip(grip, "Тяни, чтобы изменить размер")
 end
 
--- ═══════════════ ТЕМА (ИСПРАВЛЕН БАГ ФОНА ПРИ СМЕНЕ ЦВЕТА) ═══════════════
+-- ═══════════ ТЕМА (ФИКС БАГА ФОНА) ═══════════
 function Window:SetAccent(c1, c2)
 	ACCENT, ACCENT2 = c1, c2 or c1
 	local h, s, v = Color3.toHSV(ACCENT)
@@ -364,7 +351,7 @@ end
 function Window:SetGlass(v) for _, fn in ipairs(glassSetters) do fn(v) end end
 function Window:SetScale(s) userScale = s; baseScale = userScale * responsive(); tween(uiScale, 0.3, nil, nil, { Scale=baseScale }) end
 
--- ═══════════════ РЕЕСТР ═══════════════
+-- ═══════════ РЕЕСТР ═══════════
 local function register(e) controls[#controls+1] = e; if e.flag then byFlag[e.flag] = e end; return e end
 applyRowState = function(e, inst)
 	local vis = (e.match~=false) and (e.depOK~=false) and (e.secOK~=false); local h = vis and (e.rowHeight or 34) or 0
@@ -388,7 +375,7 @@ stagger = function(page)
 end
 local function changed(e) if e and e.flag then updateDeps(); queueAutoSave() end; refreshBindHud() end
 
--- ═══════════════ HUD ═══════════════
+-- ═══════════ HUD ═══════════
 do
 	local bindRows = {}
 	refreshBindHud = function()
@@ -408,7 +395,7 @@ do
 	end
 end
 
--- ═══════════════ ПАЛИТРА ═══════════════
+-- ═══════════ ПАЛИТРА ═══════════
 local palActions = {}
 local function addAction(name, hint, fn) palActions[#palActions+1] = { name=name, hint=hint or "действие", run=fn } end
 local function palSelect(i)
@@ -479,7 +466,7 @@ focusControl = function(e)
 end
 Window.FocusControl = function(self, e) focusControl(e) end
 
--- ═══════════════ КОНФИГИ ═══════════════
+-- ═══════════ КОНФИГИ ═══════════
 local function toHex(c) return string.format("#%02X%02X%02X", round(c.R*255), round(c.G*255), round(c.B*255)) end
 local function fromHex(h) if typeof(h)~="string" then return nil end local r,g,b = string.match(h, "#?(%x%x)(%x%x)(%x%x)"); if not r then return nil end return Color3.fromRGB(tonumber(r,16), tonumber(g,16), tonumber(b,16)) end
 Window.ToHex, Window.FromHex = toHex, fromHex
@@ -539,7 +526,7 @@ queueAutoSave = function()
 	task.delay(1.5, function() saveQueued=false; if not CONFIG.AutoSave then return end; local ok, json = pcall(function() return HttpService:JSONEncode(Window:GetConfig()) end); if ok then FS.write("autosave", json) end end)
 end
 
--- ═══════════════ ЦИКЛ / ОКНО ═══════════════
+-- ═══════════ ЦИКЛ / ОКНО ═══════════
 local function startLoop()
 	if renderConn then return end
 	local acc, frames, sparkAcc, slowAcc = 0, 0, 0, 0; local fps = 60
@@ -607,7 +594,7 @@ function Window:Destroy()
 	gui:Destroy(); blur:Destroy(); cc:Destroy(); _G.__RufuUI = nil
 end
 
--- ═══════════════ DRAG / RESIZE ═══════════════
+-- ═══════════ DRAG / RESIZE ═══════════
 connect(dragZone.InputBegan, function(input) if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then dragging=true; dragStartInput=UserInputService:GetMouseLocation(); dragStartPos=targetPos; tween(uiScale, 0.25, nil, nil, { Scale=baseScale*1.015 }) end end)
 connect(dragZone.MouseButton2Click, function() moved=false; centerPanel(); Window:Notify("Окно по центру", nil, "info", 1.4) end)
 connect(grip.InputBegan, function(input) if minimized then return end; if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then resizing=true; resizeStart=UserInputService:GetMouseLocation(); resizeStartSize=Vector2.new(W,H); tween(panelStroke, 0.2, nil, nil, { Transparency=0.5, Color=ACCENT }) end end)
@@ -655,7 +642,7 @@ local function watchCamera()
 end
 watchCamera(); connect(workspace:GetPropertyChangedSignal("CurrentCamera"), watchCamera)
 
--- ═══════════════ КОНТРОЛЫ (ДВИЖОК КНОПОК) ═══════════════
+-- ═══════════ КОНТРОЛЫ ═══════════
 local Tab = {}; Tab.__index = Tab
 local function fadeIcon(box, tr, time) for _, p in ipairs(box:GetChildren()) do if p:IsA("Frame") then tween(p, time or 0.2, nil, nil, { BackgroundTransparency=tr }) end end end
 local function pulse(sc, from) sc.Scale = from or 0.97; tween(sc, 0.35, Enum.EasingStyle.Back, nil, { Scale=1 }) end
@@ -679,6 +666,7 @@ function Tab:_row(height, name, clickable)
 	local card = new(clickable and "TextButton" or "Frame", { Name="Card", BackgroundColor3=T.Card, BackgroundTransparency=0.55, BorderSizePixel=0, Size=UDim2.fromScale(1,1), Parent=holder })
 	if clickable then card.Text=""; card.AutoButtonColor=false end
 	corner(card, 9); stroke(card, 0.93, 1)
+	-- ФИКС ТЕМЫ ДЛЯ КАРТОЧЕК
 	accent(function(c) local h, s, v = Color3.toHSV(c); tween(card, 0.4, nil, nil, { BackgroundColor3 = Color3.fromHSV(h, clamp(s * 0.3, 0, 1), 0.18) }) end)
 	local sc = new("UIScale", { Scale=1, Parent=card })
 	local e = { kind="row", holder=holder, card=card, scale=sc, name=string.lower(name or ""), displayName=name, rowHeight=height, section=self._section, tab=self, tabName=self.name, match=true, depOK=true, secOK=true, _vis=true }
@@ -1052,7 +1040,7 @@ function Tab:PlayerList(cfg)
 	register(e); return { Instance=holder, Get=function() return selected end, Refresh=rebuild }
 end
 
--- ═══════════════ ТАБЫ ═══════════════
+-- ═══════════ ТАБЫ ═══════════
 local function applyFilter(tab, query)
 	query = string.lower(query or ""); local total = 0
 	for _, e in ipairs(tab.rows) do if e.kind~="section" then local m = (query=="") or string.find(e.name or "", query, 1, true)~=nil; e.match = m; if m then total+=1; if e.section then e.section.anyVisible=true end end end end
@@ -1111,7 +1099,7 @@ connect(searchInput.Focused, function() tween(searchStroke, 0.2, nil, nil, { Tra
 connect(searchInput.FocusLost, function() tween(searchStroke, 0.25, nil, nil, { Transparency=0.9, Color=T.White }); if searchInput.Text=="" then tween(searchBox, 0.3, Enum.EasingStyle.Quint, nil, { Size=UDim2.fromOffset(SEARCH_W,24) }) end; searchRecolor(T.Dim) end)
 connect(palInput:GetPropertyChangedSignal("Text"), function() if paletteOpen then renderPalette(palInput.Text) end end)
 
--- ═══════════════ ВВОД ═══════════════
+-- ═══════════ ВВОД ═══════════
 connect(UserInputService.InputBegan, function(input, processed)
 	if listening then listening(input); return end
 	if paletteOpen and input.UserInputType==Enum.UserInputType.Keyboard then
@@ -1149,133 +1137,3 @@ addAction("Сбросить все значения", "опасно", function()
 addAction("Экспорт конфига", "конфиг", function() closePalette(); Window:ExportConfig() end)
 
 
--- ═══════════════════════════════════════════════════════════════════════════
--- ███  КОНСТРУКТОР: ТВОИ КНОПКИ И ЧИТЫ (ДОБАВЛЯЙ СЮДА!)  ███
--- ═══════════════════════════════════════════════════════════════════════════
-
--- 1. Создаем вкладку
-local MainTab = Window:Tab("Combat", "target", "Аим и боевка")
-
--- 2. Создаем секцию
-local AimSection = MainTab:Section("Aimbot Settings")
-
--- 3. Добавляем кнопку
-AimSection:Button({
-	Name = "Тестовая кнопка",
-	Callback = function()
-		Window:Notify("Успех", "Кнопка работает!", "good")
-	end
-})
-
--- 4. Добавляем переключатель (Toggle)
-AimSection:Toggle({
-	Name = "Enable Aimbot",
-	Default = false,
-	Flag = "Aimbot",
-	Callback = function(State)
-		if State then
-			print("Аим включен")
-		else
-			print("Аим выключен")
-		end
-	end
-})
-
--- 5. Добавляем ползунок (Slider)
-AimSection:Slider({
-	Name = "FOV Radius",
-	Min = 50,
-	Max = 500,
-	Default = 150,
-	Flag = "Aim_FOV",
-	Callback = function(Value)
-		print("Новый FOV:", Value)
-	end
-})
-
--- 6. Выпадающий список (Dropdown)
-AimSection:Dropdown({
-	Name = "Target Part",
-	Options = {"Head", "Torso", "Random"},
-	Default = "Head",
-	Flag = "Aim_Part",
-	Callback = function(Option)
-		print("Выбрано:", Option)
-	end
-})
-
--- ==========================================
--- ВКЛАДКА ИГРОКА
--- ==========================================
-local PlayerTab = Window:Tab("Player", "user", "Персонаж")
-local MoveSection = PlayerTab:Section("Movement")
-
-MoveSection:Slider({
-	Name = "WalkSpeed",
-	Min = 16, Max = 150, Default = 16, Flag = "Speed",
-	Callback = function(Value)
-		local Hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-		if Hum then Hum.WalkSpeed = Value end
-	end
-})
-
-MoveSection:Toggle({
-	Name = "Infinite Jump",
-	Default = false, Flag = "InfJump",
-	Callback = function(State)
-		getgenv().InfJump = State
-	end
-})
-
-game:GetService("UserInputService").JumpRequest:Connect(function()
-	if getgenv().InfJump then
-		local Hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid")
-		if Hum then Hum:ChangeState("Jumping") end
-	end
-end)
-
--- ==========================================
--- ВКЛАДКА НАСТРОЕК МЕНЮ
--- ==========================================
-local SettingsTab = Window:Tab("Settings", "sliders", "Настройки хаба")
-local ThemeSection = SettingsTab:Section("Интерфейс")
-
-ThemeSection:Dropdown({
-	Name = "Цвет меню",
-	Options = {"Azure", "Violet", "Mint", "Sunset", "Mono"},
-	Default = "Azure",
-	Callback = function(Theme)
-		local Colors = {
-			Azure = Color3.fromRGB(96, 150, 255), Violet = Color3.fromRGB(160, 110, 255),
-			Mint = Color3.fromRGB(70, 220, 170), Sunset = Color3.fromRGB(255, 140, 90),
-			Mono = Color3.fromRGB(226, 230, 240)
-		}
-		if Colors[Theme] then Window:SetAccent(Colors[Theme]) end
-	end
-})
-
-ThemeSection:Slider({
-	Name = "Размытие фона", Min = 0, Max = 30, Default = 14,
-	Callback = function(Value) Window:SetBlur(Value) end
-})
-
-local ConfigSection = SettingsTab:Section("Сохранения")
-ConfigSection:Button({ Name = "Сохранить конфиг", Callback = function() Window:SaveConfig("default"); Window:Notify("Конфиг", "Сохранено!", "good") end })
-ConfigSection:Button({ Name = "Загрузить конфиг", Callback = function() Window:LoadConfig("default"); Window:Notify("Конфиг", "Загружено!", "info") end })
-
-
--- ═══════════════ ЗАПУСК МЕНЮ ═══════════════
-baseScale = userScale * responsive(); uiScale.Scale = baseScale
-keyHint.Text = string.upper(CONFIG.ToggleKey.Name) .. " · hide   |   Ctrl+K · palette"
-centerPanel(); curPos = targetPos; root.Position = UDim2.fromOffset(curPos.X, curPos.Y)
-layoutShadows(H, true); startLoop(); refreshBindHud(); updateDeps()
-task.delay(0.35, function() tween(watermark, 0.5, Enum.EasingStyle.Quint, nil, { GroupTransparency=CONFIG.Watermark and 0 or 1 }) end)
-task.delay(0.6, function()
-	if CONFIG.AutoSave and FS.read("autosave") then
-		local raw = FS.read("autosave"); local ok, data = pcall(function() return HttpService:JSONDecode(raw) end)
-		if ok and typeof(data)=="table" then Window:ApplyConfig(data); Window:Notify("Автосохранение загружено", nil, "info", 2.2) end
-	end
-end)
-if CONFIG.OpenOnStart then task.delay(0.4, function() Window:Open() end) end
-task.delay(1.1, function() Window:Notify(CONFIG.Title.." UI загружен", CONFIG.ToggleKey.Name.." · меню,  Ctrl+K · палитра", "good", 3.4) end)
-print("[RUFU UI] "..CONFIG.Version.." — "..CONFIG.ToggleKey.Name.." открыть, Ctrl+K палитра")
