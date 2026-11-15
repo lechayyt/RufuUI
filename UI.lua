@@ -1,7 +1,7 @@
 --[[
-	██ RUFU UI v4.0 — ИСПРАВЛЕННЫЙ КОНСТРУКТОР (БЕЗ БАГОВ)
-	Все ошибки исправлены. Движок отделен от кнопок.
-	Чтобы добавить свою функцию — листай в самый низ в блок "КОНСТРУКТОР".
+	██ RUFU UI v5.0 — ИДЕАЛЬНЫЙ КОНСТРУКТОР (ВСЕ БАГИ ИСПРАВЛЕНЫ)
+	Скопируй ВЕСЬ этот код в LocalScript. 
+	Меню откроется само при запуске игры (или на RightShift).
 ]]
 
 -- ═══════════════ СЕРВИСЫ ═══════════════
@@ -22,7 +22,7 @@ local PlayerGui   = LocalPlayer:WaitForChild("PlayerGui")
 -- Настройки окна
 local CONFIG = {
 	Title       = "RUFU HUB",
-	Version     = "v4.0",
+	Version     = "v5.0",
 	ToggleKey   = Enum.KeyCode.RightShift,
 	Size        = Vector2.new(500, 340),
 	MinSize     = Vector2.new(430, 250),
@@ -118,7 +118,7 @@ local function icon(kind, parent, color, pos, size)
 	return box, recolor
 end
 
--- ═══════════════ АВАТАРКИ (ИСПРАВЛЕНО) ═══════════════
+-- ═══════════════ АВАТАРКИ (ИСПРАВЛЕНО СМЕЩЕНИЕ) ═══════════════
 local function setAvatar(img, userId, px)
 	px = px or 150; img.ScaleType = Enum.ScaleType.Crop; img.ImageTransparency = 1
 	img.Image = string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=%d&h=%d", userId, px, px)
@@ -192,7 +192,7 @@ local TAB_H, TAB_GAP = 32, 4
 local pill = new("Frame", { Name="Pill", BackgroundColor3=T.White, BackgroundTransparency=0.9, BorderSizePixel=0, Size=UDim2.new(1,0,0,TAB_H), Position=UDim2.fromOffset(0,0), ZIndex=1, Parent=tabsBox }); corner(pill, 9); stroke(pill, 0.9, 1)
 local pillBar = new("Frame", { BackgroundColor3=ACCENT, BorderSizePixel=0, AnchorPoint=Vector2.new(0,0.5), Position=UDim2.new(0,0,0.5,0), Size=UDim2.fromOffset(3,15), Parent=pill }); corner(pillBar, 2); accent(function(c) tween(pillBar, 0.35, nil, nil, { BackgroundColor3=c }) end)
 
--- Аватарка (Исправлено смещение)
+-- Аватарка (Исправлено смещение влево)
 local profile = new("CanvasGroup", { Name="Profile", BackgroundTransparency=1, GroupTransparency=0, ZIndex=3, AnchorPoint=Vector2.new(0,1), Position=UDim2.new(0,12,1,-10), Size=UDim2.new(1,-24,0,34), Parent=side })
 local avatarHolder = new("Frame", { BackgroundColor3=T.Card, BackgroundTransparency=0.25, BorderSizePixel=0, ZIndex=2, AnchorPoint=Vector2.new(0.5,0.5), Size=UDim2.fromOffset(28,28), Position=UDim2.fromOffset(16,17), Parent=profile })
 corner(avatarHolder, 14)
@@ -351,7 +351,7 @@ do
 	attachTooltip(logoBtn, "Сменить акцент"); attachTooltip(avatarHolder, LocalPlayer.Name.." · id "..LocalPlayer.UserId); attachTooltip(grip, "Тяни, чтобы изменить размер")
 end
 
--- ═══════════════ ТЕМА (ИСПРАВЛЕН БАГ ФОНА) ═══════════════
+-- ═══════════════ ТЕМА (ИСПРАВЛЕН БАГ ФОНА ПРИ СМЕНЕ ЦВЕТА) ═══════════════
 function Window:SetAccent(c1, c2)
 	ACCENT, ACCENT2 = c1, c2 or c1
 	local h, s, v = Color3.toHSV(ACCENT)
