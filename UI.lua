@@ -123,13 +123,15 @@ function RufuLib:New(opts)
 		glow=sh(70,0.965,ACCENT,28); accent(function(c) tween(glow,0.35,nil,nil,{BackgroundColor3=c}) end)
 		sh(36,0.90,nil,22); sh(18,0.86,nil,20); sh(8,0.80,nil,18)
 	end
-	local function layoutShadows(h,inst) for _,s in ipairs(shadows) do local sz=UDim2.fromOffset(W+s.grow,(h or H)+s.grow); if inst then s.o.Size=sz else tween(s.o,0.35,nil,nil,{Size=sz}) end end; root.Size=UDim2.fromOffset(W+MARGIN*2,(h or H)+MARGIN*2) end
+	-- [FIX] layoutShadows больше НЕ трогает размер root (он всегда постоянный, панель просто сжимается внутри)
+	local function layoutShadows(h,inst) for _,s in ipairs(shadows) do local sz=UDim2.fromOffset(W+s.grow,(h or H)+s.grow); if inst then s.o.Size=sz else tween(s.o,0.35,nil,nil,{Size=sz}) end end end
 	local panel=new("Frame",{Name="Panel",BackgroundColor3=T.Panel,BackgroundTransparency=0.12,BorderSizePixel=0,ClipsDescendants=true,ZIndex=2,Position=UDim2.fromOffset(MARGIN,MARGIN),Size=UDim2.fromOffset(W,H),Parent=root})
 	corner(panel,14); local panelStroke=stroke(panel,0.86,1.2)
 	new("UIGradient",{Rotation=115,Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(40,43,56)),ColorSequenceKeypoint.new(0.55,T.Panel),ColorSequenceKeypoint.new(1,Color3.fromRGB(15,16,21))}),Parent=panel})
 	glassSetters[#glassSetters+1]=function(v) tween(panel,0.3,nil,nil,{BackgroundTransparency=v}); tween(panelStroke,0.3,nil,nil,{Transparency=clamp(v+0.74,0,0.95)}) end
 	local sheenGrad=new("UIGradient",{Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.42,1),NumberSequenceKeypoint.new(0.5,0.15),NumberSequenceKeypoint.new(0.58,1),NumberSequenceKeypoint.new(1,1)}),Color=ColorSequence.new(T.White,ACCENT),Offset=Vector2.new(-1,0)})
-	sheenGrad.Parent=new("Frame",{BackgroundColor3=T.White,BorderSizePixel=0,ZIndex=6,Position=UDim2.fromOffset(16,0),Size=UDim2.new(1,-32,0,1),Parent=panel})
+	-- [FIX] блик-линия утоплена на 1px вниз и короче — больше не выпирает за скруглённые углы панели
+	sheenGrad.Parent=new("Frame",{BackgroundColor3=T.White,BorderSizePixel=0,ZIndex=6,Position=UDim2.fromOffset(18,1),Size=UDim2.new(1,-36,0,1),Parent=panel})
 	accent(function(c) tween(sheenGrad,0.35,nil,nil,{Color=ColorSequence.new(T.White,c)}) end)
 	local dragZone=new("TextButton",{Name="Drag",Text="",AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.new(1,0,0,46),ZIndex=1,Parent=panel})
 	local SIDE_W=124
@@ -159,8 +161,9 @@ function RufuLib:New(opts)
 	local statusDot=new("Frame",{BackgroundColor3=T.Good,BorderSizePixel=0,ZIndex=2,Position=UDim2.fromOffset(36,19),Size=UDim2.fromOffset(5,5),Parent=profile}); corner(statusDot,3)
 	local clockLabel=text({Text="--:--",TextSize=9,TextColor3=T.Dim,ZIndex=2,Position=UDim2.fromOffset(45,15),Size=UDim2.new(1,-46,0,12),Parent=profile})
 	local content=new("Frame",{Name="Content",BackgroundTransparency=1,ZIndex=2,Position=UDim2.fromOffset(SIDE_W,0),Size=UDim2.new(1,-SIDE_W,1,0),Parent=panel})
-	local pageTitle=text({Text="",Font=Enum.Font.GothamBold,TextSize=13,ZIndex=3,Position=UDim2.fromOffset(14,9),Size=UDim2.fromOffset(150,16),Parent=content})
-	local pageSub=text({Text="",TextSize=9,TextColor3=T.Dim,ZIndex=3,Position=UDim2.fromOffset(14,25),Size=UDim2.fromOffset(160,12),Parent=content})
+	-- [FIX] заголовок страницы опущен и растянут на всю шапку (центр y=23, как у поиска и кнопок)
+	local pageTitle=text({Text="",Font=Enum.Font.GothamBold,TextSize=13,ZIndex=3,Position=UDim2.fromOffset(14,0),Size=UDim2.new(1,-28,0,46),Parent=content})
+	local pageSub=text({Text="",TextSize=9,TextColor3=T.Dim,ZIndex=3,Position=UDim2.fromOffset(14,30),Size=UDim2.fromOffset(160,12),Visible=false,Parent=content})
 	local SEARCH_W=118
 	local searchBox=new("Frame",{BackgroundColor3=T.Bg,BackgroundTransparency=0.35,BorderSizePixel=0,ZIndex=3,AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-84,0,23),Size=UDim2.fromOffset(SEARCH_W,24),Parent=content}); corner(searchBox,8)
 	local searchStroke=stroke(searchBox,0.9,1)
@@ -179,8 +182,9 @@ function RufuLib:New(opts)
 	local paletteBtn=headBtn(-58,"spark"); local miniBtn,miniIcon=headBtn(-34,"minus"); local closeBtn=headBtn(-10,"close")
 	new("Frame",{BackgroundColor3=T.White,BackgroundTransparency=0.93,BorderSizePixel=0,Position=UDim2.fromOffset(14,46),Size=UDim2.new(1,-28,0,1),Parent=content})
 	local pagesBox=new("Frame",{BackgroundTransparency=1,ClipsDescendants=true,Position=UDim2.fromOffset(0,50),Size=UDim2.new(1,0,1,-74),Parent=content})
-	local topMask=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=6,Position=UDim2.fromOffset(0,50),Size=UDim2.new(1,0,0,10),Parent=content}); new("UIGradient",{Rotation=90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}),Parent=topMask})
-	local bottomMask=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=6,Position=UDim2.new(0,0,1,-34),Size=UDim2.new(1,0,0,10),Parent=content}); new("UIGradient",{Rotation=-90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}),Parent=bottomMask})
+	-- [FIX] маски градиента сдвинуты внутрь на 14px — не выпирают за скруглённые углы панели
+	local topMask=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=6,Position=UDim2.fromOffset(14,50),Size=UDim2.new(1,-28,0,10),Parent=content}); new("UIGradient",{Rotation=90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}),Parent=topMask})
+	local bottomMask=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=6,Position=UDim2.new(0,14,1,-34),Size=UDim2.new(1,-28,0,10),Parent=content}); new("UIGradient",{Rotation=-90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}),Parent=bottomMask})
 	local footer=new("CanvasGroup",{BackgroundTransparency=1,GroupTransparency=0,AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,24),Parent=content})
 	local keyHint=text({Text="",TextSize=9,TextColor3=T.Dim,Position=UDim2.fromOffset(14,0),Size=UDim2.new(1,-196,1,0),Parent=footer})
 	local pingLabel=text({Text="0 ms",TextSize=9,TextColor3=T.Dim,TextXAlignment=Enum.TextXAlignment.Right,AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-120,0,0),Size=UDim2.fromOffset(48,24),Parent=footer})
@@ -196,8 +200,9 @@ function RufuLib:New(opts)
 	new("UIListLayout",{Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Bottom,HorizontalAlignment=Enum.HorizontalAlignment.Right,Parent=toastBox})
 	local tooltip=new("CanvasGroup",{Name="Tooltip",BackgroundColor3=T.Bg,BackgroundTransparency=0.08,BorderSizePixel=0,GroupTransparency=1,Visible=false,ZIndex=40,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,22),Parent=gui}); corner(tooltip,6); stroke(tooltip,0.82,1); pad(tooltip,8,8,0,0)
 	local tooltipText=text({Text="",TextSize=10,TextColor3=T.Sub,AutomaticSize=Enum.AutomaticSize.X,TextTruncate=Enum.TextTruncate.None,Size=UDim2.fromOffset(0,22),Parent=tooltip})
-	local watermark=new("CanvasGroup",{Name="Watermark",BackgroundColor3=T.Panel,BackgroundTransparency=0.18,BorderSizePixel=0,GroupTransparency=1,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,26),Position=UDim2.fromOffset(18,18),ZIndex=15,Parent=gui}); corner(watermark,8); stroke(watermark,0.85,1); pad(watermark,8,10,0,0)
-	new("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,7),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Center,Parent=watermark})
+	-- [FIX] вотермарка: фиксированная ширина + UIListLayout.Center => контент ровно по центру полоски, ничего не вылезает за края
+	local watermark=new("CanvasGroup",{Name="Watermark",BackgroundColor3=T.Panel,BackgroundTransparency=0.18,BorderSizePixel=0,GroupTransparency=1,Size=UDim2.fromOffset(252,26),Position=UDim2.fromOffset(18,18),ZIndex=15,Parent=gui}); corner(watermark,8); stroke(watermark,0.85,1)
+	new("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,7),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Center,HorizontalAlignment=Enum.HorizontalAlignment.Center,Parent=watermark})
 	local wmFps,wmPing,wmTime
 	do
 		local ah=new("Frame",{BackgroundColor3=T.Card,BackgroundTransparency=0.3,BorderSizePixel=0,Size=UDim2.fromOffset(18,18),LayoutOrder=1,Parent=watermark}); corner(ah,9)
@@ -245,6 +250,8 @@ function RufuLib:New(opts)
 	local function centerPanel() local v=viewport(); targetPos=Vector2.new(v.X*0.5,v.Y*0.5) end
 	local function responsive() local v=viewport(); return clamp(math.min(v.X/1440,v.Y/900),0.78,1.1) end
 	local function panelHeight() return minimized and 46 or H end
+	-- [FIX] при сворачивании верхний край окна остаётся на месте (не прыгает в центр экрана)
+	local function collapseShift() return minimized and ((H-46)*0.5*uiScale.Scale) or 0 end
 	local function clickSound(f) if not CONFIG.Sounds then return end local s=Instance.new("Sound"); s.SoundId="rbxasset://sounds/electronicpingshort.wav"; s.Volume=0.22; s.PlaybackSpeed=f or 1.4; s.Parent=gui; s:Play(); Debris:AddItem(s,1) end
 	local function ripple(obj,color)
 		local r=new("Frame",{BackgroundColor3=color or T.White,BackgroundTransparency=0.86,BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(0,0),ZIndex=0,Parent=obj}); corner(r,999)
@@ -347,7 +354,7 @@ function RufuLib:New(opts)
 		local ui=data.ui
 		if typeof(ui)=="table" then
 			if ui.accent then local c1,c2=fromHex(ui.accent),fromHex(ui.accent2 or ui.accent); if c1 then Window:SetAccent(c1,c2) end end
-			if tonumber(ui.w) and tonumber(ui.h) then W=clamp(tonumber(ui.w),CONFIG.MinSize.X,CONFIG.MaxSize.X); H=clamp(tonumber(ui.h),CONFIG.MinSize.Y,CONFIG.MaxSize.Y); panel.Size=UDim2.fromOffset(W,H); layoutShadows(H,true) end
+			if tonumber(ui.w) and tonumber(ui.h) then W=clamp(tonumber(ui.w),CONFIG.MinSize.X,CONFIG.MaxSize.X); H=clamp(tonumber(ui.h),CONFIG.MinSize.Y,CONFIG.MaxSize.Y); panel.Size=UDim2.fromOffset(W,panelHeight()); layoutShadows(panelHeight(),true); root.Size=UDim2.fromOffset(W+MARGIN*2,H+MARGIN*2) end
 			if tonumber(ui.scale) then Window:SetScale(clamp(tonumber(ui.scale),0.7,1.4)) end
 			if ui.moved and tonumber(ui.x) and tonumber(ui.y) then moved=true; targetPos=Vector2.new(ui.x,ui.y); curPos=targetPos end
 			if tonumber(ui.blur) then CONFIG.Blur=clamp(tonumber(ui.blur),0,24) end
@@ -473,12 +480,22 @@ function RufuLib:New(opts)
 			if resizing and resizeStart then
 				local m=UserInputService:GetMouseLocation(); local d=(m-resizeStart)/math.max(uiScale.Scale,0.1)
 				W=clamp(round(resizeStartSize.X+d.X),CONFIG.MinSize.X,CONFIG.MaxSize.X); H=clamp(round(resizeStartSize.Y+d.Y),CONFIG.MinSize.Y,CONFIG.MaxSize.Y)
-				panel.Size=UDim2.fromOffset(W,H); layoutShadows(H,true)
+				panel.Size=UDim2.fromOffset(W,H); layoutShadows(H,true); root.Size=UDim2.fromOffset(W+MARGIN*2,H+MARGIN*2) -- [FIX] root растёт только при ресайзе
 			end
 			if Window._open then
 				local a=1-math.exp(-dt*19); local prev=curPos; curPos=curPos:Lerp(targetPos,a)
-				root.Position=UDim2.fromOffset(round(curPos.X),round(curPos.Y))
-				local vel=(curPos.X-prev.X)/math.max(dt,1/240); root.Rotation=lerp(root.Rotation,clamp(vel*0.004,-1.4,1.4),1-math.exp(-dt*10))
+				-- [FIX] во время движения — лёгкий наклон; как только остановились — мгновенный снап на целые пиксели и Rotation=0.
+				-- Именно дробные координаты + поворот заставляли Roblox «мылить» CanvasGroup на 5-10 секунд после драга.
+				local moving=dragging or (targetPos-curPos).Magnitude>0.6
+				if moving then
+					root.Position=UDim2.fromOffset(curPos.X,curPos.Y+collapseShift())
+					local vel=(curPos.X-prev.X)/math.max(dt,1/240)
+					root.Rotation=lerp(root.Rotation,clamp(vel*0.004,-1.4,1.4),1-math.exp(-dt*10))
+				else
+					curPos=targetPos
+					root.Position=UDim2.fromOffset(round(targetPos.X),round(targetPos.Y+collapseShift()))
+					root.Rotation=0
+				end
 				local m=UserInputService:GetMouseLocation(); local rel=(m.X-panel.AbsolutePosition.X)/math.max(panel.AbsoluteSize.X,1)
 				cursorGlowTarget=clamp(rel,-0.5,1.5); cursorGlow=lerp(cursorGlow,cursorGlowTarget,1-math.exp(-dt*6)); sheenGrad.Offset=Vector2.new(cursorGlow-0.5,0)
 			end
@@ -516,6 +533,7 @@ function RufuLib:New(opts)
 	function Window:SetMinimized(v)
 		minimized=v and true or false; local h=panelHeight()
 		tween(panel,0.42,Enum.EasingStyle.Quint,nil,{Size=UDim2.fromOffset(W,h)}); layoutShadows(h)
+		-- [FIX] позиция окна плавно компенсируется через collapseShift() в RenderStepped — верхний край стоит на месте, без рывка в центр
 		tween(footer,0.22,nil,nil,{GroupTransparency=minimized and 1 or 0}); tween(profile,0.22,nil,nil,{GroupTransparency=minimized and 1 or 0}); tween(tabsBox,0.22,nil,nil,{GroupTransparency=minimized and 1 or 0})
 		tween(topMask,0.22,nil,nil,{BackgroundTransparency=minimized and 1 or 0.25}); tween(bottomMask,0.22,nil,nil,{BackgroundTransparency=minimized and 1 or 0.25})
 		tween(miniIcon,0.35,Enum.EasingStyle.Quint,nil,{Rotation=minimized and 180 or 0})
@@ -539,7 +557,7 @@ function RufuLib:New(opts)
 		local m1=input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch; if not m1 then return end
 		if dragging then dragging=false; moved=true; tween(uiScale,0.4,Enum.EasingStyle.Back,nil,{Scale=baseScale}); queueAutoSave() end
 		if resizing then resizing=false; moved=true; tween(panelStroke,0.3,nil,nil,{Transparency=0.86,Color=T.White}); queueAutoSave() end
-		if wmDrag then wmDrag=false end
+		if wmDrag then wmDrag=false; watermark.Position=UDim2.fromOffset(round(watermark.Position.X.Offset),round(watermark.Position.Y.Offset)) end -- [FIX] снап вотермарки на целые пиксели
 	end)
 	local lastClick=0
 	connect(dragZone.MouseButton1Click,function() local now=os.clock(); if now-lastClick<0.32 then moved=false; centerPanel(); tween(uiScale,0.4,Enum.EasingStyle.Back,nil,{Scale=baseScale}) end; lastClick=now end)
@@ -1021,9 +1039,13 @@ function RufuLib:New(opts)
 		for _,t in ipairs(self.Tabs) do local on=(t==tab); tween(t.lbl,0.22,nil,nil,{TextColor3=on and T.Text or T.Sub}); t.recolor(on and T.Text or T.Sub); tween(t.ibScale,0.35,Enum.EasingStyle.Back,nil,{Scale=on and 1.1 or 1}) end
 		tween(pill,0.45,Enum.EasingStyle.Quint,nil,{Position=UDim2.fromOffset(0,(newIndex-1)*(TAB_H+TAB_GAP))})
 		tween(pillBar,0.4,Enum.EasingStyle.Back,nil,{Size=UDim2.fromOffset(3,19)}); task.delay(0.22,function() tween(pillBar,0.3,nil,nil,{Size=UDim2.fromOffset(3,15)}) end)
-		pageTitle.Text=tab.name; pageSub.Text=tab.subtitle
-		pageTitle.Position=UDim2.fromOffset(14,9+6*dir); pageSub.Position=UDim2.fromOffset(14,25+6*dir)
-		tween(pageTitle,0.35,Enum.EasingStyle.Quint,nil,{Position=UDim2.fromOffset(14,9)}); tween(pageSub,0.42,Enum.EasingStyle.Quint,nil,{Position=UDim2.fromOffset(14,25)})
+		pageTitle.Text=tab.name
+		-- [FIX] подзаголовок показывается только если задан; иначе заголовок один, ровно по центру шапки (как поиск)
+		local hasSub=(tab.subtitle or "")~=""
+		pageSub.Visible=hasSub; pageSub.Text=tab.subtitle
+		local titleY=hasSub and 9 or 15
+		pageTitle.Size=UDim2.fromOffset(150,16); pageTitle.Position=UDim2.fromOffset(14,titleY+6*dir); pageSub.Position=UDim2.fromOffset(14,25+6*dir)
+		tween(pageTitle,0.35,Enum.EasingStyle.Quint,nil,{Position=UDim2.fromOffset(14,titleY)}); tween(pageSub,0.42,Enum.EasingStyle.Quint,nil,{Position=UDim2.fromOffset(14,25)})
 		if prev then tween(prev.page,0.16,Enum.EasingStyle.Quad,Enum.EasingDirection.In,{GroupTransparency=1,Position=UDim2.fromOffset(-12*dir,0)}); local p=prev.page; task.delay(0.17,function() if activeTab~=prev then p.Visible=false; p.Position=UDim2.fromOffset(0,0) end end) end
 		tab.page.Visible=true; tab.page.GroupTransparency=1; tab.page.Position=UDim2.fromOffset(instant and 0 or (14*dir),0)
 		tween(tab.page,0.32,Enum.EasingStyle.Quint,nil,{GroupTransparency=0,Position=UDim2.fromOffset(0,0)})
