@@ -1,4 +1,4 @@
---[[ RufuLib v2.1 — полная версия. Двойной API. Возвращает библиотеку. ]]
+--[[ COSMO v2.1 — полная версия. Двойной API. Возвращает библиотеку. ]]
 local Players=game:GetService("Players")
 local TweenService=game:GetService("TweenService")
 local UserInputService=game:GetService("UserInputService")
@@ -11,7 +11,9 @@ local Stats=game:GetService("Stats")
 local TextService=game:GetService("TextService")
 local LocalPlayer=Players.LocalPlayer
 local PlayerGui=LocalPlayer:WaitForChild("PlayerGui")
-local T={Bg=Color3.fromRGB(14,15,20),Panel=Color3.fromRGB(22,24,31),Side=Color3.fromRGB(18,20,26),Card=Color3.fromRGB(38,41,52),Track=Color3.fromRGB(60,64,78),Text=Color3.fromRGB(238,240,247),Sub=Color3.fromRGB(146,152,168),Dim=Color3.fromRGB(104,110,126),White=Color3.fromRGB(255,255,255),Good=Color3.fromRGB(80,220,140),Warn=Color3.fromRGB(255,190,90),Bad=Color3.fromRGB(255,96,110)}
+-- [COSMO] голубо-синяя палитра
+local T={Bg=Color3.fromRGB(10,15,26),Panel=Color3.fromRGB(16,23,38),Side=Color3.fromRGB(12,18,31),Card=Color3.fromRGB(30,43,66),Track=Color3.fromRGB(52,70,100),Text=Color3.fromRGB(235,243,255),Sub=Color3.fromRGB(140,160,190),Dim=Color3.fromRGB(96,114,144),White=Color3.fromRGB(255,255,255),Good=Color3.fromRGB(80,220,140),Warn=Color3.fromRGB(255,190,90),Bad=Color3.fromRGB(255,96,110)}
+local LOGO_ID="rbxassetid://125954321358941" -- [COSMO] логотип
 local Anim={mul=1,off=false}
 local loops={}
 local activeTweens=setmetatable({},{__mode="k"})
@@ -85,7 +87,7 @@ local function setAvatar(img,userId,px)
 end
 local function isfn(f) return typeof(f)=="function" end
 local function makeFS(folder)
-	local FS={available=isfn(writefile) and isfn(readfile)}; local memory=_G.__RufuFiles or {}; _G.__RufuFiles=memory
+	local FS={available=isfn(writefile) and isfn(readfile)}; local memory=_G.__CosmoFiles or {}; _G.__CosmoFiles=memory
 	pcall(function() if FS.available and isfn(makefolder) and isfn(isfolder) and not isfolder(folder) then makefolder(folder) end end)
 	local function fp(n) return folder.."/"..n..".json" end
 	function FS.write(n,d) if FS.available then local ok=pcall(function() writefile(fp(n),d) end); if ok then return true end end memory[n]=d; return false end
@@ -100,21 +102,22 @@ local function makeFS(folder)
 	return FS
 end
 
-local RufuLib={}
+local CosmoLib={}
 local ActiveWindow
-function RufuLib:Notification(title,msg,kind,time) if ActiveWindow then ActiveWindow:Notify(title,msg,kind,time) end end
+function CosmoLib:Notification(title,msg,kind,time) if ActiveWindow then ActiveWindow:Notify(title,msg,kind,time) end end
 
-function RufuLib:New(opts)
+function CosmoLib:New(opts)
 	opts=opts or {}
-	local CONFIG={Title=opts.Name or "RufuLib",Version=opts.Version or "v2.1",ToggleKey=opts.ToggleKey or Enum.KeyCode.RightShift,Size=Vector2.new(500,340),MinSize=Vector2.new(430,250),MaxSize=Vector2.new(780,640),Accent=opts.Accent or Color3.fromRGB(96,150,255),Accent2=opts.Accent2 or Color3.fromRGB(146,122,255),Blur=14,Dim=0.12,Scale=1,Sounds=false,Watermark=true,BindHud=true,AutoSave=true,Folder=opts.FolderToSave or "RufuLib"}
+	-- [COSMO] имя, акценты: голубой + синий
+	local CONFIG={Title=opts.Name or "COSMO",Version=opts.Version or "v2.1",ToggleKey=opts.ToggleKey or Enum.KeyCode.RightShift,Size=Vector2.new(500,340),MinSize=Vector2.new(430,250),MaxSize=Vector2.new(780,640),Accent=opts.Accent or Color3.fromRGB(86,180,255),Accent2=opts.Accent2 or Color3.fromRGB(56,110,255),Blur=14,Dim=0.12,Scale=1,Sounds=false,Watermark=true,BindHud=true,AutoSave=true,Folder=opts.FolderToSave or "COSMO"}
 	local ACCENT,ACCENT2=CONFIG.Accent,CONFIG.Accent2
 	local FS=makeFS(CONFIG.Folder)
 	local accentSetters,glassSetters,conns={},{},{}
 	local function accent(fn) accentSetters[#accentSetters+1]=fn end
 	local function connect(sig,fn) local c=sig:Connect(fn); conns[#conns+1]=c; return c end
-	if _G.__RufuUI and _G.__RufuUI.Destroy then pcall(function() _G.__RufuUI:Destroy() end) end
+	if _G.__CosmoUI and _G.__CosmoUI.Destroy then pcall(function() _G.__CosmoUI:Destroy() end) end
 	local W,H=CONFIG.Size.X,CONFIG.Size.Y; local MARGIN=40
-	local gui=new("ScreenGui",{Name="RufuUI",ResetOnSpawn=false,IgnoreGuiInset=true,AutoLocalize=false,DisplayOrder=999,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,Enabled=true,Parent=PlayerGui})
+	local gui=new("ScreenGui",{Name="CosmoUI",ResetOnSpawn=false,IgnoreGuiInset=true,AutoLocalize=false,DisplayOrder=999,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,Enabled=true,Parent=PlayerGui})
 	local root=new("CanvasGroup",{Name="Root",BackgroundTransparency=1,GroupTransparency=1,Visible=false,AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(W+MARGIN*2,H+MARGIN*2),Position=UDim2.fromScale(0.5,0.5),Parent=gui})
 	local uiScale=new("UIScale",{Scale=CONFIG.Scale,Parent=root})
 	local shadows,glow={},nil
@@ -123,14 +126,15 @@ function RufuLib:New(opts)
 		glow=sh(70,0.965,ACCENT,28); accent(function(c) tween(glow,0.35,nil,nil,{BackgroundColor3=c}) end)
 		sh(36,0.90,nil,22); sh(18,0.86,nil,20); sh(8,0.80,nil,18)
 	end
-	-- [FIX] layoutShadows больше НЕ трогает размер root (он всегда постоянный, панель просто сжимается внутри)
+	-- [FIX] layoutShadows не трогает размер root (панель сжимается внутри постоянного root)
 	local function layoutShadows(h,inst) for _,s in ipairs(shadows) do local sz=UDim2.fromOffset(W+s.grow,(h or H)+s.grow); if inst then s.o.Size=sz else tween(s.o,0.35,nil,nil,{Size=sz}) end end end
 	local panel=new("Frame",{Name="Panel",BackgroundColor3=T.Panel,BackgroundTransparency=0.12,BorderSizePixel=0,ClipsDescendants=true,ZIndex=2,Position=UDim2.fromOffset(MARGIN,MARGIN),Size=UDim2.fromOffset(W,H),Parent=root})
 	corner(panel,14); local panelStroke=stroke(panel,0.86,1.2)
-	new("UIGradient",{Rotation=115,Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(40,43,56)),ColorSequenceKeypoint.new(0.55,T.Panel),ColorSequenceKeypoint.new(1,Color3.fromRGB(15,16,21))}),Parent=panel})
+	-- [COSMO] градиент панели в синих тонах
+	new("UIGradient",{Rotation=115,Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(32,48,78)),ColorSequenceKeypoint.new(0.55,T.Panel),ColorSequenceKeypoint.new(1,Color3.fromRGB(9,13,22))}),Parent=panel})
 	glassSetters[#glassSetters+1]=function(v) tween(panel,0.3,nil,nil,{BackgroundTransparency=v}); tween(panelStroke,0.3,nil,nil,{Transparency=clamp(v+0.74,0,0.95)}) end
 	local sheenGrad=new("UIGradient",{Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.42,1),NumberSequenceKeypoint.new(0.5,0.15),NumberSequenceKeypoint.new(0.58,1),NumberSequenceKeypoint.new(1,1)}),Color=ColorSequence.new(T.White,ACCENT),Offset=Vector2.new(-1,0)})
-	-- [FIX] блик-линия утоплена на 1px вниз и короче — больше не выпирает за скруглённые углы панели
+	-- [FIX] блик-линия утоплена на 1px и короче — не выпирает за скруглённые углы
 	sheenGrad.Parent=new("Frame",{BackgroundColor3=T.White,BorderSizePixel=0,ZIndex=6,Position=UDim2.fromOffset(18,1),Size=UDim2.new(1,-36,0,1),Parent=panel})
 	accent(function(c) tween(sheenGrad,0.35,nil,nil,{Color=ColorSequence.new(T.White,c)}) end)
 	local dragZone=new("TextButton",{Name="Drag",Text="",AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.new(1,0,0,46),ZIndex=1,Parent=panel})
@@ -139,11 +143,13 @@ function RufuLib:New(opts)
 	new("UIGradient",{Rotation=90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0.15),NumberSequenceKeypoint.new(1,0.55)}),Parent=side})
 	glassSetters[#glassSetters+1]=function(v) tween(side,0.3,nil,nil,{BackgroundTransparency=clamp(v+0.16,0,0.9)}) end
 	new("Frame",{BackgroundColor3=T.White,BackgroundTransparency=0.92,BorderSizePixel=0,Position=UDim2.new(1,-1,0,0),Size=UDim2.new(0,1,1,0),Parent=side})
+	-- [COSMO] кнопка-логотип с картинкой 125954321358941
 	local logoBtn=new("TextButton",{Text="",AutoButtonColor=false,BackgroundColor3=ACCENT,BorderSizePixel=0,ZIndex=3,Position=UDim2.fromOffset(12,13),Size=UDim2.fromOffset(20,20),Parent=side})
 	corner(logoBtn,6); accent(function(c) tween(logoBtn,0.35,nil,nil,{BackgroundColor3=c}) end)
 	local logoGrad=new("UIGradient",{Rotation=45,Color=ColorSequence.new(ACCENT,ACCENT2),Parent=logoBtn}); accent(function(c) tween(logoGrad,0.35,nil,nil,{Color=ColorSequence.new(c,ACCENT2)}) end)
 	local logoScale=new("UIScale",{Scale=1,Parent=logoBtn})
-	local logoDot=new("Frame",{BackgroundColor3=T.White,BackgroundTransparency=0.15,BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(7,7),Parent=logoBtn}); corner(logoDot,4)
+	local logoImg=new("ImageLabel",{BackgroundTransparency=1,BorderSizePixel=0,Image=LOGO_ID,ImageTransparency=1,ScaleType=Enum.ScaleType.Fit,ZIndex=2,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(0.82,0.82),Parent=logoBtn})
+	task.spawn(function() pcall(function() ContentProvider:PreloadAsync({logoImg}) end); if logoImg.Parent then tween(logoImg,0.5,Enum.EasingStyle.Quad,nil,{ImageTransparency=0}) end end)
 	text({Text=CONFIG.Title,Font=Enum.Font.GothamBold,TextSize=13,ZIndex=3,Position=UDim2.fromOffset(38,12),Size=UDim2.fromOffset(70,14),Parent=side})
 	local verChip=new("Frame",{BackgroundColor3=ACCENT,BackgroundTransparency=0.82,BorderSizePixel=0,ZIndex=3,Position=UDim2.fromOffset(38,26),Size=UDim2.fromOffset(30,11),Parent=side}); corner(verChip,5); accent(function(c) tween(verChip,0.35,nil,nil,{BackgroundColor3=c}) end)
 	text({Text=CONFIG.Version,TextSize=8,Font=Enum.Font.GothamBold,TextColor3=T.Text,TextXAlignment=Enum.TextXAlignment.Center,ZIndex=3,Size=UDim2.fromScale(1,1),Parent=verChip})
@@ -161,7 +167,7 @@ function RufuLib:New(opts)
 	local statusDot=new("Frame",{BackgroundColor3=T.Good,BorderSizePixel=0,ZIndex=2,Position=UDim2.fromOffset(36,19),Size=UDim2.fromOffset(5,5),Parent=profile}); corner(statusDot,3)
 	local clockLabel=text({Text="--:--",TextSize=9,TextColor3=T.Dim,ZIndex=2,Position=UDim2.fromOffset(45,15),Size=UDim2.new(1,-46,0,12),Parent=profile})
 	local content=new("Frame",{Name="Content",BackgroundTransparency=1,ZIndex=2,Position=UDim2.fromOffset(SIDE_W,0),Size=UDim2.new(1,-SIDE_W,1,0),Parent=panel})
-	-- [FIX] заголовок страницы опущен и растянут на всю шапку (центр y=23, как у поиска и кнопок)
+	-- [FIX] заголовок по центру шапки (y=23, как поиск и кнопки)
 	local pageTitle=text({Text="",Font=Enum.Font.GothamBold,TextSize=13,ZIndex=3,Position=UDim2.fromOffset(14,0),Size=UDim2.new(1,-28,0,46),Parent=content})
 	local pageSub=text({Text="",TextSize=9,TextColor3=T.Dim,ZIndex=3,Position=UDim2.fromOffset(14,30),Size=UDim2.fromOffset(160,12),Visible=false,Parent=content})
 	local SEARCH_W=118
@@ -182,7 +188,7 @@ function RufuLib:New(opts)
 	local paletteBtn=headBtn(-58,"spark"); local miniBtn,miniIcon=headBtn(-34,"minus"); local closeBtn=headBtn(-10,"close")
 	new("Frame",{BackgroundColor3=T.White,BackgroundTransparency=0.93,BorderSizePixel=0,Position=UDim2.fromOffset(14,46),Size=UDim2.new(1,-28,0,1),Parent=content})
 	local pagesBox=new("Frame",{BackgroundTransparency=1,ClipsDescendants=true,Position=UDim2.fromOffset(0,50),Size=UDim2.new(1,0,1,-74),Parent=content})
-	-- [FIX] маски градиента сдвинуты внутрь на 14px — не выпирают за скруглённые углы панели
+	-- [FIX] маски сдвинуты внутрь на 14px — не выпирают за углы
 	local topMask=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=6,Position=UDim2.fromOffset(14,50),Size=UDim2.new(1,-28,0,10),Parent=content}); new("UIGradient",{Rotation=90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}),Parent=topMask})
 	local bottomMask=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=6,Position=UDim2.new(0,14,1,-34),Size=UDim2.new(1,-28,0,10),Parent=content}); new("UIGradient",{Rotation=-90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}),Parent=bottomMask})
 	local footer=new("CanvasGroup",{BackgroundTransparency=1,GroupTransparency=0,AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,24),Parent=content})
@@ -194,21 +200,23 @@ function RufuLib:New(opts)
 	local fpsLabel=text({Text="60 fps",TextSize=9,TextColor3=T.Dim,TextXAlignment=Enum.TextXAlignment.Right,AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-14,0,0),Size=UDim2.fromOffset(46,24),Parent=footer})
 	local grip=new("TextButton",{Text="",AutoButtonColor=false,BackgroundTransparency=1,ZIndex=9,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-2,1,-2),Size=UDim2.fromOffset(16,16),Parent=panel})
 	for i=1,3 do local l=new("Frame",{BackgroundColor3=T.Dim,BackgroundTransparency=0.4,BorderSizePixel=0,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-2,1,-2-(i-1)*4),Size=UDim2.fromOffset(3+(i-1)*4,1.4),Rotation=-45,Parent=grip}); corner(l,1) end
-	local blur=new("BlurEffect",{Name="RufuBlur",Size=0,Parent=Lighting})
-	local cc=new("ColorCorrectionEffect",{Name="RufuDim",Brightness=0,Saturation=0,Contrast=0,Parent=Lighting})
+	local blur=new("BlurEffect",{Name="CosmoBlur",Size=0,Parent=Lighting})
+	local cc=new("ColorCorrectionEffect",{Name="CosmoDim",Brightness=0,Saturation=0,Contrast=0,Parent=Lighting})
 	local toastBox=new("Frame",{Name="Toasts",BackgroundTransparency=1,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-18,1,-18),Size=UDim2.fromOffset(252,320),ZIndex=20,Parent=gui})
 	new("UIListLayout",{Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Bottom,HorizontalAlignment=Enum.HorizontalAlignment.Right,Parent=toastBox})
 	local tooltip=new("CanvasGroup",{Name="Tooltip",BackgroundColor3=T.Bg,BackgroundTransparency=0.08,BorderSizePixel=0,GroupTransparency=1,Visible=false,ZIndex=40,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,22),Parent=gui}); corner(tooltip,6); stroke(tooltip,0.82,1); pad(tooltip,8,8,0,0)
 	local tooltipText=text({Text="",TextSize=10,TextColor3=T.Sub,AutomaticSize=Enum.AutomaticSize.X,TextTruncate=Enum.TextTruncate.None,Size=UDim2.fromOffset(0,22),Parent=tooltip})
-	-- [FIX] вотермарка: фиксированная ширина + UIListLayout.Center => контент ровно по центру полоски, ничего не вылезает за края
+	-- [FIX] вотермарка: фикс. ширина + центрирование контента
 	local watermark=new("CanvasGroup",{Name="Watermark",BackgroundColor3=T.Panel,BackgroundTransparency=0.18,BorderSizePixel=0,GroupTransparency=1,Size=UDim2.fromOffset(252,26),Position=UDim2.fromOffset(18,18),ZIndex=15,Parent=gui}); corner(watermark,8); stroke(watermark,0.85,1)
 	new("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,7),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Center,HorizontalAlignment=Enum.HorizontalAlignment.Center,Parent=watermark})
 	local wmFps,wmPing,wmTime
 	do
+		-- [COSMO] в вотермарке логотип вместо аватарки
 		local ah=new("Frame",{BackgroundColor3=T.Card,BackgroundTransparency=0.3,BorderSizePixel=0,Size=UDim2.fromOffset(18,18),LayoutOrder=1,Parent=watermark}); corner(ah,9)
-		local a=new("ImageLabel",{BackgroundTransparency=1,ImageTransparency=1,Size=UDim2.fromScale(1,1),Parent=ah}); corner(a,9); setAvatar(a,LocalPlayer.UserId,48)
+		local a=new("ImageLabel",{BackgroundTransparency=1,ImageTransparency=1,Image=LOGO_ID,ScaleType=Enum.ScaleType.Fit,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(0.8,0.8),Parent=ah})
+		task.spawn(function() pcall(function() ContentProvider:PreloadAsync({a}) end); if a.Parent then tween(a,0.5,nil,nil,{ImageTransparency=0}) end end)
 		local function wl(o,s,c,w) return text({Text=s,TextSize=10,TextColor3=c or T.Sub,LayoutOrder=o,Size=UDim2.fromOffset(w or 40,26),Parent=watermark}) end
-		local wn=wl(2,CONFIG.Title,T.Text,40); wn.Font=Enum.Font.GothamBold
+		local wn=wl(2,CONFIG.Title,T.Text,44); wn.Font=Enum.Font.GothamBold
 		wmFps=wl(4,"60 fps",T.Sub,44); wmPing=wl(6,"0 ms",T.Sub,42); wmTime=wl(8,"--:--:--",T.Dim,48)
 		local function wd(o) local d=new("Frame",{BackgroundColor3=ACCENT,BackgroundTransparency=0.3,BorderSizePixel=0,Size=UDim2.fromOffset(3,3),LayoutOrder=o,Parent=watermark}); corner(d,2); accent(function(c) tween(d,0.35,nil,nil,{BackgroundColor3=c}) end) end
 		wd(3); wd(5); wd(7)
@@ -219,7 +227,8 @@ function RufuLib:New(opts)
 	local touchBtn
 	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
 		touchBtn=new("TextButton",{Text="",AutoButtonColor=false,BackgroundColor3=T.Panel,BackgroundTransparency=0.15,BorderSizePixel=0,AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,18,1,-80),Size=UDim2.fromOffset(44,44),ZIndex=18,Parent=gui}); corner(touchBtn,22); stroke(touchBtn,0.8,1.2,ACCENT)
-		local tl=new("Frame",{BackgroundColor3=ACCENT,BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(16,16),Parent=touchBtn}); corner(tl,5); new("UIGradient",{Rotation=45,Color=ColorSequence.new(ACCENT,ACCENT2),Parent=tl})
+		local tl=new("Frame",{BackgroundColor3=ACCENT,BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(24,24),Parent=touchBtn}); corner(tl,7); new("UIGradient",{Rotation=45,Color=ColorSequence.new(ACCENT,ACCENT2),Parent=tl})
+		new("ImageLabel",{BackgroundTransparency=1,Image=LOGO_ID,ScaleType=Enum.ScaleType.Fit,ZIndex=2,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(0.8,0.8),Parent=tl})
 	end
 	local palette=new("CanvasGroup",{Name="Palette",BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=0.45,GroupTransparency=1,Visible=false,ZIndex=30,Size=UDim2.fromScale(1,1),Parent=panel})
 	local palBox=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.04,BorderSizePixel=0,ZIndex=2,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(320,224),Parent=palette}); corner(palBox,12); stroke(palBox,0.8,1.2)
@@ -232,7 +241,7 @@ function RufuLib:New(opts)
 	new("UIListLayout",{Padding=UDim.new(0,3),SortOrder=Enum.SortOrder.LayoutOrder,Parent=palList})
 	text({Text="↑↓ выбор   Enter выполнить   Esc закрыть",TextSize=9,TextColor3=T.Dim,AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,12,1,-8),Size=UDim2.new(1,-24,0,14),Parent=palBox})
 
-	local Window={Flags={},Tabs={},_open=false}; _G.__RufuUI=Window
+	local Window={Flags={},Tabs={},_open=false}; _G.__CosmoUI=Window
 	local userScale,baseScale=CONFIG.Scale,CONFIG.Scale
 	local targetPos,curPos=Vector2.new(0,0),Vector2.new(0,0)
 	local dragging,moved,resizing,minimized=false,false,false,false
@@ -250,7 +259,7 @@ function RufuLib:New(opts)
 	local function centerPanel() local v=viewport(); targetPos=Vector2.new(v.X*0.5,v.Y*0.5) end
 	local function responsive() local v=viewport(); return clamp(math.min(v.X/1440,v.Y/900),0.78,1.1) end
 	local function panelHeight() return minimized and 46 or H end
-	-- [FIX] при сворачивании верхний край окна остаётся на месте (не прыгает в центр экрана)
+	-- [FIX] верхний край окна стоит на месте при сворачивании
 	local function collapseShift() return minimized and ((H-46)*0.5*uiScale.Scale) or 0 end
 	local function clickSound(f) if not CONFIG.Sounds then return end local s=Instance.new("Sound"); s.SoundId="rbxasset://sounds/electronicpingshort.wav"; s.Volume=0.22; s.PlaybackSpeed=f or 1.4; s.Parent=gui; s:Play(); Debris:AddItem(s,1) end
 	local function ripple(obj,color)
@@ -382,7 +391,7 @@ function RufuLib:New(opts)
 	end
 	function Window:ExportConfig()
 		local ok,json=pcall(function() return HttpService:JSONEncode(Window:GetConfig()) end); if not ok then return "" end
-		if isfn(setclipboard) then pcall(function() setclipboard(json) end); Window:Notify("Скопировано в буфер",#json.." байт","good") else print("[RUFU] config:\n"..json); Window:Notify("Конфиг в консоли (F9)",#json.." байт","info") end
+		if isfn(setclipboard) then pcall(function() setclipboard(json) end); Window:Notify("Скопировано в буфер",#json.." байт","good") else print("[COSMO] config:\n"..json); Window:Notify("Конфиг в консоли (F9)",#json.." байт","info") end
 		return json
 	end
 	function Window:ImportConfig(str)
@@ -480,12 +489,11 @@ function RufuLib:New(opts)
 			if resizing and resizeStart then
 				local m=UserInputService:GetMouseLocation(); local d=(m-resizeStart)/math.max(uiScale.Scale,0.1)
 				W=clamp(round(resizeStartSize.X+d.X),CONFIG.MinSize.X,CONFIG.MaxSize.X); H=clamp(round(resizeStartSize.Y+d.Y),CONFIG.MinSize.Y,CONFIG.MaxSize.Y)
-				panel.Size=UDim2.fromOffset(W,H); layoutShadows(H,true); root.Size=UDim2.fromOffset(W+MARGIN*2,H+MARGIN*2) -- [FIX] root растёт только при ресайзе
+				panel.Size=UDim2.fromOffset(W,H); layoutShadows(H,true); root.Size=UDim2.fromOffset(W+MARGIN*2,H+MARGIN*2)
 			end
 			if Window._open then
 				local a=1-math.exp(-dt*19); local prev=curPos; curPos=curPos:Lerp(targetPos,a)
-				-- [FIX] во время движения — лёгкий наклон; как только остановились — мгновенный снап на целые пиксели и Rotation=0.
-				-- Именно дробные координаты + поворот заставляли Roblox «мылить» CanvasGroup на 5-10 секунд после драга.
+				-- [FIX] при остановке — снап на целые пиксели и Rotation=0 (нет «мыла» после драга)
 				local moving=dragging or (targetPos-curPos).Magnitude>0.6
 				if moving then
 					root.Position=UDim2.fromOffset(curPos.X,curPos.Y+collapseShift())
@@ -533,7 +541,7 @@ function RufuLib:New(opts)
 	function Window:SetMinimized(v)
 		minimized=v and true or false; local h=panelHeight()
 		tween(panel,0.42,Enum.EasingStyle.Quint,nil,{Size=UDim2.fromOffset(W,h)}); layoutShadows(h)
-		-- [FIX] позиция окна плавно компенсируется через collapseShift() в RenderStepped — верхний край стоит на месте, без рывка в центр
+		-- [FIX] позиция компенсируется через collapseShift() — без рывка в центр
 		tween(footer,0.22,nil,nil,{GroupTransparency=minimized and 1 or 0}); tween(profile,0.22,nil,nil,{GroupTransparency=minimized and 1 or 0}); tween(tabsBox,0.22,nil,nil,{GroupTransparency=minimized and 1 or 0})
 		tween(topMask,0.22,nil,nil,{BackgroundTransparency=minimized and 1 or 0.25}); tween(bottomMask,0.22,nil,nil,{BackgroundTransparency=minimized and 1 or 0.25})
 		tween(miniIcon,0.35,Enum.EasingStyle.Quint,nil,{Rotation=minimized and 180 or 0})
@@ -544,7 +552,7 @@ function RufuLib:New(opts)
 	function Window:Destroy()
 		if renderConn then renderConn:Disconnect(); renderConn=nil end
 		for _,c in ipairs(conns) do pcall(function() c:Disconnect() end) end; table.clear(conns)
-		gui:Destroy(); blur:Destroy(); cc:Destroy(); _G.__RufuUI=nil
+		gui:Destroy(); blur:Destroy(); cc:Destroy(); _G.__CosmoUI=nil
 		if ActiveWindow==Window then ActiveWindow=nil end
 	end
 
@@ -557,7 +565,7 @@ function RufuLib:New(opts)
 		local m1=input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch; if not m1 then return end
 		if dragging then dragging=false; moved=true; tween(uiScale,0.4,Enum.EasingStyle.Back,nil,{Scale=baseScale}); queueAutoSave() end
 		if resizing then resizing=false; moved=true; tween(panelStroke,0.3,nil,nil,{Transparency=0.86,Color=T.White}); queueAutoSave() end
-		if wmDrag then wmDrag=false; watermark.Position=UDim2.fromOffset(round(watermark.Position.X.Offset),round(watermark.Position.Y.Offset)) end -- [FIX] снап вотермарки на целые пиксели
+		if wmDrag then wmDrag=false; watermark.Position=UDim2.fromOffset(round(watermark.Position.X.Offset),round(watermark.Position.Y.Offset)) end
 	end)
 	local lastClick=0
 	connect(dragZone.MouseButton1Click,function() local now=os.clock(); if now-lastClick<0.32 then moved=false; centerPanel(); tween(uiScale,0.4,Enum.EasingStyle.Back,nil,{Scale=baseScale}) end; lastClick=now end)
@@ -569,13 +577,14 @@ function RufuLib:New(opts)
 	connect(searchClear.MouseButton1Click,function() searchInput.Text=""; searchClear.Visible=false; searchCount.Visible=true end)
 	connect(logoBtn.MouseEnter,function() tween(logoScale,0.3,Enum.EasingStyle.Back,nil,{Scale=1.15}); tween(logoBtn,0.35,nil,nil,{Rotation=90}) end)
 	connect(logoBtn.MouseLeave,function() tween(logoScale,0.35,Enum.EasingStyle.Back,nil,{Scale=1}); tween(logoBtn,0.45,Enum.EasingStyle.Quint,nil,{Rotation=0}) end)
-	connect(logoBtn.MouseButton1Click,function() local c=Color3.fromHSV(math.random(),0.62,1); local hh=Color3.toHSV(c); Window:SetAccent(c,Color3.fromHSV((hh+0.12)%1,0.6,1)); ripple(logoBtn,T.White); Window:Notify("Акцент обновлён",toHex(c),"good",1.8) end)
+	-- [COSMO] случайный акцент теперь в голубо-синем диапазоне
+	local function randomBlue() local c=Color3.fromHSV(0.53+math.random()*0.12,0.6+math.random()*0.15,1); local hh=Color3.toHSV(c); return c,Color3.fromHSV(clamp(hh+0.06,0.5,0.68),0.7,1) end
+	connect(logoBtn.MouseButton1Click,function() local c,c2=randomBlue(); Window:SetAccent(c,c2); ripple(logoBtn,T.White); Window:Notify("Акцент обновлён",toHex(c),"good",1.8) end)
 	connect(avatarHolder.MouseEnter,function() tween(avatarScale,0.3,Enum.EasingStyle.Back,nil,{Scale=1.12}); tween(avatarRing,0.25,nil,nil,{Transparency=0.15}) end)
 	connect(avatarHolder.MouseLeave,function() tween(avatarScale,0.35,Enum.EasingStyle.Back,nil,{Scale=1}); tween(avatarRing,0.3,nil,nil,{Transparency=0.55}) end)
 	watermark.Active=true
 	connect(watermark.InputBegan,function(input) if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then wmDrag=true; wmStart=UserInputService:GetMouseLocation(); wmStartPos=Vector2.new(watermark.Position.X.Offset,watermark.Position.Y.Offset) end end)
 	if touchBtn then connect(touchBtn.MouseButton1Click,function() Window:Toggle() end) end
-	loop(logoDot,1.6,Enum.EasingStyle.Sine,{BackgroundTransparency=0.55,Size=UDim2.fromOffset(5,5)},true)
 	loop(statusDot,1.4,Enum.EasingStyle.Sine,{BackgroundTransparency=0.55},true)
 	loop(glow,3.2,Enum.EasingStyle.Sine,{BackgroundTransparency=0.935},true)
 	loop(avatarRing,2.4,Enum.EasingStyle.Sine,{Thickness=2},true)
@@ -1040,7 +1049,7 @@ function RufuLib:New(opts)
 		tween(pill,0.45,Enum.EasingStyle.Quint,nil,{Position=UDim2.fromOffset(0,(newIndex-1)*(TAB_H+TAB_GAP))})
 		tween(pillBar,0.4,Enum.EasingStyle.Back,nil,{Size=UDim2.fromOffset(3,19)}); task.delay(0.22,function() tween(pillBar,0.3,nil,nil,{Size=UDim2.fromOffset(3,15)}) end)
 		pageTitle.Text=tab.name
-		-- [FIX] подзаголовок показывается только если задан; иначе заголовок один, ровно по центру шапки (как поиск)
+		-- [FIX] подзаголовок только если задан; заголовок ровно по центру шапки
 		local hasSub=(tab.subtitle or "")~=""
 		pageSub.Visible=hasSub; pageSub.Text=tab.subtitle
 		local titleY=hasSub and 9 or 15
@@ -1087,7 +1096,7 @@ function RufuLib:New(opts)
 	addAction("Открыть / закрыть меню","действие",function() closePalette(); Window:Toggle() end)
 	addAction("Окно в центр","действие",function() closePalette(); moved=false; centerPanel() end)
 	addAction("Свернуть / развернуть","действие",function() closePalette(); Window:SetMinimized(not minimized) end)
-	addAction("Случайный акцент","тема",function() closePalette(); local c=Color3.fromHSV(math.random(),0.62,1); local hh=Color3.toHSV(c); Window:SetAccent(c,Color3.fromHSV((hh+0.12)%1,0.6,1)); Window:Notify("Акцент обновлён",toHex(c),"good",1.8) end)
+	addAction("Случайный акцент","тема",function() closePalette(); local c,c2=randomBlue(); Window:SetAccent(c,c2); Window:Notify("Акцент обновлён",toHex(c),"good",1.8) end)
 	addAction("Сохранить конфиг","конфиг",function() closePalette(); Window:SaveConfig("default") end)
 	addAction("Загрузить конфиг","конфиг",function() closePalette(); Window:LoadConfig("default") end)
 	addAction("Сбросить все значения","опасно",function() closePalette(); Window:ResetDefaults() end)
@@ -1108,4 +1117,4 @@ function RufuLib:New(opts)
 	return Window
 end
 
-return RufuLib
+return CosmoLib
