@@ -1,4 +1,12 @@
---[[ COSMO v2.1 — полная версия. Двойной API. Возвращает библиотеку. ]]
+--[[ COSMO v2.1 — полная версия. Двойной API. Возвращает библиотеку.
+     FIX-сборка:
+       • лого крупнее и видно (кнопка 26px, картинка 90%)
+       • углы больше не выпирают (сайдбар скруглён, палитра скруглена, grip утоплен, радиусы теней = радиус панели + grow/2)
+       • hover-масштаб иконок/кнопок строго из центра (AnchorPoint 0.5)
+       • аватар крупный, всегда видимый, hover без обрезания
+       • сворачивание: верхний край стоит на месте, подсветка остаётся сверху
+       • блюр полностью убран
+]]
 local Players=game:GetService("Players")
 local TweenService=game:GetService("TweenService")
 local UserInputService=game:GetService("UserInputService")
@@ -66,8 +74,10 @@ local ICONS={
 	spark={f={{6,0.5,2,13,1},{0.5,6,13,2,1},{3,3,1.6,1.6,1},{9.4,9.4,1.6,1.6,1}}},target={r={{1,1,12,12,1.3},{4,4,6,6,1.3}},f={{6,6,2,2,1}}},
 	players={f={{2,2,4,4,2},{8,2,4,4,2},{1,8,6,4,2},{7,8,6,4,2}}},refresh={r={{1,1,12,12,1.4}},f={{8.5,0.5,4,3,1}}},
 }
+-- [FIX] иконка центрирована по AnchorPoint → UIScale/Rotation работают из центра, а не из угла
 local function icon(kind,parent,color,pos,size)
-	local box=new("Frame",{Name="Icon",BackgroundTransparency=1,Size=UDim2.fromOffset(size or 14,size or 14),Position=pos or UDim2.fromOffset(0,0),Parent=parent})
+	size=size or 14; pos=pos or UDim2.fromOffset(0,0)
+	local box=new("Frame",{Name="Icon",BackgroundTransparency=1,AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(size,size),Position=pos+UDim2.fromOffset(size*0.5,size*0.5),Parent=parent})
 	local spec=ICONS[kind] or ICONS.grid; local parts={}
 	for _,d in ipairs(spec.f or {}) do local f=new("Frame",{BackgroundColor3=color,BorderSizePixel=0,Size=UDim2.fromOffset(d[3],d[4]),Position=UDim2.fromOffset(d[1],d[2]),Rotation=d[6] or 0,Parent=box}); corner(f,d[5] or 1); parts[#parts+1]={o=f,p="BackgroundColor3"} end
 	for _,d in ipairs(spec.r or {}) do local f=new("Frame",{BackgroundTransparency=1,Size=UDim2.fromOffset(d[3],d[4]),Position=UDim2.fromOffset(d[1],d[2]),Parent=box}); corner(f,99); local s=stroke(f,0,d[5] or 1.4,color); parts[#parts+1]={o=s,p="Color"} end
@@ -75,14 +85,20 @@ local function icon(kind,parent,color,pos,size)
 	return box,recolor
 end
 local function fadeIcon(box,tr,time) for _,p in ipairs(box:GetChildren()) do if p:IsA("Frame") then tween(p,time or 0.2,nil,nil,{BackgroundTransparency=tr}) end end end
-local function setAvatar(img,userId,px)
+-- [FIX] аватар: сначала гарантированный rbxthumb, потом апгрейд до полного Thumbnail; буква-фолбэк гаснет только когда картинка реально готова
+local function setAvatar(img,userId,px,onReady)
 	px=px or 150; img.ScaleType=Enum.ScaleType.Crop; img.ImageTransparency=1
 	img.Image=string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=%d&h=%d",userId,px,px)
 	task.spawn(function()
-		pcall(function() ContentProvider:PreloadAsync({img}) end)
+		local ok=pcall(function() ContentProvider:PreloadAsync({img}) end)
 		if not img.Parent then return end
-		tween(img,0.45,Enum.EasingStyle.Quad,nil,{ImageTransparency=0})
-		for i=1,3 do local ok,url,ready=pcall(function() return Players:GetUserThumbnailAsync(userId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size150x150) end); if ok and url and ready then if img.Parent then img.Image=url end return end; task.wait(0.5*i) end
+		tween(img,0.4,Enum.EasingStyle.Quad,nil,{ImageTransparency=0})
+		if onReady and ok then pcall(onReady) end
+		for i=1,3 do
+			local got,url,ready=pcall(function() return Players:GetUserThumbnailAsync(userId,Enum.ThumbnailType.HeadShot,Enum.ThumbnailSize.Size150x150) end)
+			if got and url and ready then if img.Parent then img.Image=url end return end
+			task.wait(0.5*i)
+		end
 	end)
 end
 local function isfn(f) return typeof(f)=="function" end
@@ -109,65 +125,79 @@ function CosmoLib:Notification(title,msg,kind,time) if ActiveWindow then ActiveW
 function CosmoLib:New(opts)
 	opts=opts or {}
 	-- [COSMO] имя, акценты: голубой + синий
-	local CONFIG={Title=opts.Name or "COSMO",Version=opts.Version or "v2.1",ToggleKey=opts.ToggleKey or Enum.KeyCode.RightShift,Size=Vector2.new(500,340),MinSize=Vector2.new(430,250),MaxSize=Vector2.new(780,640),Accent=opts.Accent or Color3.fromRGB(86,180,255),Accent2=opts.Accent2 or Color3.fromRGB(56,110,255),Blur=14,Dim=0.12,Scale=1,Sounds=false,Watermark=true,BindHud=true,AutoSave=true,Folder=opts.FolderToSave or "COSMO"}
+	local CONFIG={Title=opts.Name or "COSMO",Version=opts.Version or "v2.1",ToggleKey=opts.ToggleKey or Enum.KeyCode.RightShift,Size=Vector2.new(500,340),MinSize=Vector2.new(430,250),MaxSize=Vector2.new(780,640),Accent=opts.Accent or Color3.fromRGB(86,180,255),Accent2=opts.Accent2 or Color3.fromRGB(56,110,255),Dim=0.12,Scale=1,Sounds=false,Watermark=true,BindHud=true,AutoSave=true,Folder=opts.FolderToSave or "COSMO"}
 	local ACCENT,ACCENT2=CONFIG.Accent,CONFIG.Accent2
 	local FS=makeFS(CONFIG.Folder)
 	local accentSetters,glassSetters,conns={},{},{}
 	local function accent(fn) accentSetters[#accentSetters+1]=fn end
 	local function connect(sig,fn) local c=sig:Connect(fn); conns[#conns+1]=c; return c end
 	if _G.__CosmoUI and _G.__CosmoUI.Destroy then pcall(function() _G.__CosmoUI:Destroy() end) end
-	local W,H=CONFIG.Size.X,CONFIG.Size.Y; local MARGIN=40
+	local W,H=CONFIG.Size.X,CONFIG.Size.Y; local MARGIN=40; local RADIUS=14
 	local gui=new("ScreenGui",{Name="CosmoUI",ResetOnSpawn=false,IgnoreGuiInset=true,AutoLocalize=false,DisplayOrder=999,ZIndexBehavior=Enum.ZIndexBehavior.Sibling,Enabled=true,Parent=PlayerGui})
 	local root=new("CanvasGroup",{Name="Root",BackgroundTransparency=1,GroupTransparency=1,Visible=false,AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(W+MARGIN*2,H+MARGIN*2),Position=UDim2.fromScale(0.5,0.5),Parent=gui})
 	local uiScale=new("UIScale",{Scale=CONFIG.Scale,Parent=root})
 	local shadows,glow={},nil
 	do
-		local function sh(grow,tr,col,r) local f=new("Frame",{BackgroundColor3=col or Color3.new(0,0,0),BackgroundTransparency=tr,BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(0.5,0,0.5,4),Size=UDim2.fromOffset(W+grow,H+grow),ZIndex=1,Parent=root},{new("UICorner",{CornerRadius=UDim.new(0,r or 18)})}); shadows[#shadows+1]={o=f,grow=grow}; return f end
-		glow=sh(70,0.965,ACCENT,28); accent(function(c) tween(glow,0.35,nil,nil,{BackgroundColor3=c}) end)
-		sh(36,0.90,nil,22); sh(18,0.86,nil,20); sh(8,0.80,nil,18)
+		-- [FIX] тени привязаны к ВЕРХУ панели (AnchorPoint 0.5,0) — при сворачивании подсветка остаётся сверху, а не уезжает вниз
+		-- [FIX] радиус тени = радиус панели + grow/2 — углы теней не выпирают из-под скругления
+		local function sh(grow,tr,col)
+			local f=new("Frame",{BackgroundColor3=col or Color3.new(0,0,0),BackgroundTransparency=tr,BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0),Position=UDim2.new(0.5,0,0,MARGIN-grow*0.5+3),Size=UDim2.fromOffset(W+grow,H+grow),ZIndex=1,Parent=root},{new("UICorner",{CornerRadius=UDim.new(0,RADIUS+grow*0.5)})})
+			shadows[#shadows+1]={o=f,grow=grow}; return f
+		end
+		glow=sh(70,0.965,ACCENT)
+		sh(36,0.90); sh(18,0.86); sh(8,0.80)
+		accent(function(c) tween(glow,0.35,nil,nil,{BackgroundColor3=c}) end)
 	end
-	-- [FIX] layoutShadows не трогает размер root (панель сжимается внутри постоянного root)
+	-- [FIX] layoutShadows меняет только размер (тени растут вниз от верхнего края)
 	local function layoutShadows(h,inst) for _,s in ipairs(shadows) do local sz=UDim2.fromOffset(W+s.grow,(h or H)+s.grow); if inst then s.o.Size=sz else tween(s.o,0.35,nil,nil,{Size=sz}) end end end
 	local panel=new("Frame",{Name="Panel",BackgroundColor3=T.Panel,BackgroundTransparency=0.12,BorderSizePixel=0,ClipsDescendants=true,ZIndex=2,Position=UDim2.fromOffset(MARGIN,MARGIN),Size=UDim2.fromOffset(W,H),Parent=root})
-	corner(panel,14); local panelStroke=stroke(panel,0.86,1.2)
+	corner(panel,RADIUS); local panelStroke=stroke(panel,0.86,1.2)
 	-- [COSMO] градиент панели в синих тонах
 	new("UIGradient",{Rotation=115,Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(32,48,78)),ColorSequenceKeypoint.new(0.55,T.Panel),ColorSequenceKeypoint.new(1,Color3.fromRGB(9,13,22))}),Parent=panel})
 	glassSetters[#glassSetters+1]=function(v) tween(panel,0.3,nil,nil,{BackgroundTransparency=v}); tween(panelStroke,0.3,nil,nil,{Transparency=clamp(v+0.74,0,0.95)}) end
 	local sheenGrad=new("UIGradient",{Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(0.42,1),NumberSequenceKeypoint.new(0.5,0.15),NumberSequenceKeypoint.new(0.58,1),NumberSequenceKeypoint.new(1,1)}),Color=ColorSequence.new(T.White,ACCENT),Offset=Vector2.new(-1,0)})
-	-- [FIX] блик-линия утоплена на 1px и короче — не выпирает за скруглённые углы
-	sheenGrad.Parent=new("Frame",{BackgroundColor3=T.White,BorderSizePixel=0,ZIndex=6,Position=UDim2.fromOffset(18,1),Size=UDim2.new(1,-36,0,1),Parent=panel})
+	-- [FIX] блик-линия утоплена и короче — не выпирает за скруглённые углы
+	sheenGrad.Parent=new("Frame",{BackgroundColor3=T.White,BorderSizePixel=0,ZIndex=6,Position=UDim2.fromOffset(20,1),Size=UDim2.new(1,-40,0,1),Parent=panel})
 	accent(function(c) tween(sheenGrad,0.35,nil,nil,{Color=ColorSequence.new(T.White,c)}) end)
 	local dragZone=new("TextButton",{Name="Drag",Text="",AutoButtonColor=false,BackgroundTransparency=1,Size=UDim2.new(1,0,0,46),ZIndex=1,Parent=panel})
 	local SIDE_W=124
 	local side=new("Frame",{Name="Sidebar",BackgroundColor3=T.Side,BackgroundTransparency=0.28,BorderSizePixel=0,Size=UDim2.new(0,SIDE_W,1,0),ZIndex=2,Parent=panel})
-	new("UIGradient",{Rotation=90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0.15),NumberSequenceKeypoint.new(1,0.55)}),Parent=side})
-	glassSetters[#glassSetters+1]=function(v) tween(side,0.3,nil,nil,{BackgroundTransparency=clamp(v+0.16,0,0.9)}) end
-	new("Frame",{BackgroundColor3=T.White,BackgroundTransparency=0.92,BorderSizePixel=0,Position=UDim2.new(1,-1,0,0),Size=UDim2.new(0,1,1,0),Parent=side})
-	-- [COSMO] кнопка-логотип с картинкой 125954321358941
-	local logoBtn=new("TextButton",{Text="",AutoButtonColor=false,BackgroundColor3=ACCENT,BorderSizePixel=0,ZIndex=3,Position=UDim2.fromOffset(12,13),Size=UDim2.fromOffset(20,20),Parent=side})
-	corner(logoBtn,6); accent(function(c) tween(logoBtn,0.35,nil,nil,{BackgroundColor3=c}) end)
+	-- [FIX] сайдбар скруглён как панель + квадратная заплатка справа (углы больше не выпирают)
+	corner(side,RADIUS)
+	local sideGrad=new("UIGradient",{Rotation=90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0.15),NumberSequenceKeypoint.new(1,0.55)}),Parent=side})
+	local sidePatch=new("Frame",{Name="SideEdge",BackgroundColor3=T.Side,BackgroundTransparency=0.28,BorderSizePixel=0,ZIndex=2,Position=UDim2.new(1,-RADIUS-1,0,0),Size=UDim2.new(0,RADIUS+1,1,0),Parent=side})
+	new("UIGradient",{Rotation=90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0.15),NumberSequenceKeypoint.new(1,0.55)}),Parent=sidePatch})
+	glassSetters[#glassSetters+1]=function(v)
+		local t=clamp(v+0.16,0,0.9)
+		tween(side,0.3,nil,nil,{BackgroundTransparency=t}); tween(sidePatch,0.3,nil,nil,{BackgroundTransparency=t})
+	end
+	new("Frame",{BackgroundColor3=T.White,BackgroundTransparency=0.92,BorderSizePixel=0,ZIndex=3,Position=UDim2.new(1,-1,0,0),Size=UDim2.new(0,1,1,0),Parent=side})
+	-- [FIX] лого: 26px, anchor по центру, картинка 90% — реально видно
+	local logoBtn=new("TextButton",{Text="",AutoButtonColor=false,BackgroundColor3=ACCENT,BorderSizePixel=0,ZIndex=3,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromOffset(25,25),Size=UDim2.fromOffset(26,26),Parent=side})
+	corner(logoBtn,8); accent(function(c) tween(logoBtn,0.35,nil,nil,{BackgroundColor3=c}) end)
 	local logoGrad=new("UIGradient",{Rotation=45,Color=ColorSequence.new(ACCENT,ACCENT2),Parent=logoBtn}); accent(function(c) tween(logoGrad,0.35,nil,nil,{Color=ColorSequence.new(c,ACCENT2)}) end)
 	local logoScale=new("UIScale",{Scale=1,Parent=logoBtn})
-	local logoImg=new("ImageLabel",{BackgroundTransparency=1,BorderSizePixel=0,Image=LOGO_ID,ImageTransparency=1,ScaleType=Enum.ScaleType.Fit,ZIndex=2,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(0.82,0.82),Parent=logoBtn})
+	local logoImg=new("ImageLabel",{BackgroundTransparency=1,BorderSizePixel=0,Image=LOGO_ID,ImageTransparency=1,ScaleType=Enum.ScaleType.Fit,ZIndex=2,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(0.9,0.9),Parent=logoBtn})
 	task.spawn(function() pcall(function() ContentProvider:PreloadAsync({logoImg}) end); if logoImg.Parent then tween(logoImg,0.5,Enum.EasingStyle.Quad,nil,{ImageTransparency=0}) end end)
-	text({Text=CONFIG.Title,Font=Enum.Font.GothamBold,TextSize=13,ZIndex=3,Position=UDim2.fromOffset(38,12),Size=UDim2.fromOffset(70,14),Parent=side})
-	local verChip=new("Frame",{BackgroundColor3=ACCENT,BackgroundTransparency=0.82,BorderSizePixel=0,ZIndex=3,Position=UDim2.fromOffset(38,26),Size=UDim2.fromOffset(30,11),Parent=side}); corner(verChip,5); accent(function(c) tween(verChip,0.35,nil,nil,{BackgroundColor3=c}) end)
+	text({Text=CONFIG.Title,Font=Enum.Font.GothamBold,TextSize=13,ZIndex=3,Position=UDim2.fromOffset(44,11),Size=UDim2.fromOffset(68,14),Parent=side})
+	local verChip=new("Frame",{BackgroundColor3=ACCENT,BackgroundTransparency=0.82,BorderSizePixel=0,ZIndex=3,Position=UDim2.fromOffset(44,26),Size=UDim2.fromOffset(30,11),Parent=side}); corner(verChip,5); accent(function(c) tween(verChip,0.35,nil,nil,{BackgroundColor3=c}) end)
 	text({Text=CONFIG.Version,TextSize=8,Font=Enum.Font.GothamBold,TextColor3=T.Text,TextXAlignment=Enum.TextXAlignment.Center,ZIndex=3,Size=UDim2.fromScale(1,1),Parent=verChip})
 	local tabsBox=new("CanvasGroup",{BackgroundTransparency=1,GroupTransparency=0,Position=UDim2.fromOffset(9,58),Size=UDim2.new(1,-18,1,-128),ZIndex=3,Parent=side})
 	local TAB_H,TAB_GAP=32,4
 	local pill=new("Frame",{Name="Pill",BackgroundColor3=T.White,BackgroundTransparency=0.9,BorderSizePixel=0,Size=UDim2.new(1,0,0,TAB_H),Position=UDim2.fromOffset(0,0),ZIndex=1,Parent=tabsBox}); corner(pill,9); stroke(pill,0.9,1)
 	local pillBar=new("Frame",{BackgroundColor3=ACCENT,BorderSizePixel=0,AnchorPoint=Vector2.new(0,0.5),Position=UDim2.new(0,0,0.5,0),Size=UDim2.fromOffset(3,15),Parent=pill}); corner(pillBar,2); accent(function(c) tween(pillBar,0.35,nil,nil,{BackgroundColor3=c}) end)
-	local profile=new("CanvasGroup",{Name="Profile",BackgroundTransparency=1,GroupTransparency=0,ZIndex=3,AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,12,1,-10),Size=UDim2.new(1,-24,0,34),Parent=side})
-	local avatarHolder=new("Frame",{BackgroundColor3=T.Card,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=2,AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(28,28),Position=UDim2.fromOffset(16,17),Parent=profile}); corner(avatarHolder,14)
-	local avatarRing=stroke(avatarHolder,0.55,1.4,ACCENT); accent(function(c) tween(avatarRing,0.35,nil,nil,{Color=c}) end)
-	text({Text=string.upper(string.sub(LocalPlayer.DisplayName,1,1)),Font=Enum.Font.GothamBold,TextSize=12,TextColor3=T.Sub,TextXAlignment=Enum.TextXAlignment.Center,ZIndex=2,Size=UDim2.fromScale(1,1),Parent=avatarHolder})
-	local avatar=new("ImageLabel",{BackgroundTransparency=1,BorderSizePixel=0,ImageTransparency=1,ZIndex=3,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(1,1),Parent=avatarHolder}); corner(avatar,14)
-	local avatarScale=new("UIScale",{Scale=1,Parent=avatarHolder}); setAvatar(avatar,LocalPlayer.UserId,150)
-	text({Text=LocalPlayer.DisplayName,TextSize=10,TextColor3=T.Sub,ZIndex=2,Position=UDim2.fromOffset(36,4),Size=UDim2.new(1,-38,0,12),Parent=profile})
-	local statusDot=new("Frame",{BackgroundColor3=T.Good,BorderSizePixel=0,ZIndex=2,Position=UDim2.fromOffset(36,19),Size=UDim2.fromOffset(5,5),Parent=profile}); corner(statusDot,3)
-	local clockLabel=text({Text="--:--",TextSize=9,TextColor3=T.Dim,ZIndex=2,Position=UDim2.fromOffset(45,15),Size=UDim2.new(1,-46,0,12),Parent=profile})
+	-- [FIX] профиль: больше места, аватар 32px, ничего не режется при hover
+	local profile=new("CanvasGroup",{Name="Profile",BackgroundTransparency=1,GroupTransparency=0,ZIndex=3,ClipsDescendants=false,AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,14,1,-12),Size=UDim2.new(1,-26,0,42),Parent=side})
+	local avatarHolder=new("Frame",{BackgroundColor3=T.Card,BackgroundTransparency=0.2,BorderSizePixel=0,ZIndex=2,AnchorPoint=Vector2.new(0.5,0.5),Size=UDim2.fromOffset(32,32),Position=UDim2.fromOffset(18,21),Parent=profile}); corner(avatarHolder,16)
+	local avatarRing=stroke(avatarHolder,0.45,1.4,ACCENT); accent(function(c) tween(avatarRing,0.35,nil,nil,{Color=c}) end)
+	local avatarLetter=text({Text=string.upper(string.sub(LocalPlayer.DisplayName,1,1)),Font=Enum.Font.GothamBold,TextSize=14,TextColor3=T.Sub,TextXAlignment=Enum.TextXAlignment.Center,ZIndex=2,Size=UDim2.fromScale(1,1),Parent=avatarHolder})
+	local avatar=new("ImageLabel",{BackgroundTransparency=1,BorderSizePixel=0,ImageTransparency=1,ZIndex=3,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(1,1),Parent=avatarHolder}); corner(avatar,16)
+	local avatarScale=new("UIScale",{Scale=1,Parent=avatarHolder})
+	setAvatar(avatar,LocalPlayer.UserId,150,function() tween(avatarLetter,0.3,nil,nil,{TextTransparency=1}) end)
+	text({Text=LocalPlayer.DisplayName,TextSize=10,TextColor3=T.Sub,ZIndex=2,Position=UDim2.fromOffset(42,7),Size=UDim2.new(1,-44,0,12),Parent=profile})
+	local statusDot=new("Frame",{BackgroundColor3=T.Good,BorderSizePixel=0,ZIndex=2,Position=UDim2.fromOffset(42,23),Size=UDim2.fromOffset(5,5),Parent=profile}); corner(statusDot,3)
+	local clockLabel=text({Text="--:--",TextSize=9,TextColor3=T.Dim,ZIndex=2,Position=UDim2.fromOffset(51,19),Size=UDim2.new(1,-52,0,12),Parent=profile})
 	local content=new("Frame",{Name="Content",BackgroundTransparency=1,ZIndex=2,Position=UDim2.fromOffset(SIDE_W,0),Size=UDim2.new(1,-SIDE_W,1,0),Parent=panel})
-	-- [FIX] заголовок по центру шапки (y=23, как поиск и кнопки)
 	local pageTitle=text({Text="",Font=Enum.Font.GothamBold,TextSize=13,ZIndex=3,Position=UDim2.fromOffset(14,0),Size=UDim2.new(1,-28,0,46),Parent=content})
 	local pageSub=text({Text="",TextSize=9,TextColor3=T.Dim,ZIndex=3,Position=UDim2.fromOffset(14,30),Size=UDim2.fromOffset(160,12),Visible=false,Parent=content})
 	local SEARCH_W=118
@@ -178,8 +208,9 @@ function CosmoLib:New(opts)
 	local searchCount=text({Text="",TextSize=9,TextColor3=T.Dim,TextXAlignment=Enum.TextXAlignment.Right,AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-8,0.5,0),Size=UDim2.fromOffset(22,12),ZIndex=2,Parent=searchBox})
 	local searchClear=new("TextButton",{Text="",AutoButtonColor=false,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=3,AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,-6,0.5,0),Size=UDim2.fromOffset(14,14),Visible=false,Parent=searchBox})
 	local _,searchClearRecolor=icon("close",searchClear,T.Dim,UDim2.fromOffset(0,0))
+	-- [FIX] кнопки шапки: anchor по центру → hover-масштаб и вращение из центра
 	local function headBtn(x,kind)
-		local b=new("TextButton",{Text="",AutoButtonColor=false,BackgroundColor3=T.White,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=3,AnchorPoint=Vector2.new(1,0.5),Position=UDim2.new(1,x,0,23),Size=UDim2.fromOffset(20,20),Parent=content}); corner(b,6)
+		local b=new("TextButton",{Text="",AutoButtonColor=false,BackgroundColor3=T.White,BackgroundTransparency=1,BorderSizePixel=0,ZIndex=3,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.new(1,x-10,0,23),Size=UDim2.fromOffset(20,20),Parent=content}); corner(b,6)
 		local box,recolor=icon(kind,b,T.Dim,UDim2.fromOffset(3,3)); local sc=new("UIScale",{Scale=1,Parent=b}); local spin=(kind=="close" or kind=="spark")
 		connect(b.MouseEnter,function() tween(b,0.18,nil,nil,{BackgroundTransparency=0.9}); recolor(T.Text); tween(sc,0.25,Enum.EasingStyle.Back,nil,{Scale=1.12}); if spin then tween(box,0.35,Enum.EasingStyle.Quint,nil,{Rotation=90}) end end)
 		connect(b.MouseLeave,function() tween(b,0.22,nil,nil,{BackgroundTransparency=1}); recolor(T.Dim); tween(sc,0.3,nil,nil,{Scale=1}); if spin then tween(box,0.4,Enum.EasingStyle.Quint,nil,{Rotation=0}) end end)
@@ -188,9 +219,9 @@ function CosmoLib:New(opts)
 	local paletteBtn=headBtn(-58,"spark"); local miniBtn,miniIcon=headBtn(-34,"minus"); local closeBtn=headBtn(-10,"close")
 	new("Frame",{BackgroundColor3=T.White,BackgroundTransparency=0.93,BorderSizePixel=0,Position=UDim2.fromOffset(14,46),Size=UDim2.new(1,-28,0,1),Parent=content})
 	local pagesBox=new("Frame",{BackgroundTransparency=1,ClipsDescendants=true,Position=UDim2.fromOffset(0,50),Size=UDim2.new(1,0,1,-74),Parent=content})
-	-- [FIX] маски сдвинуты внутрь на 14px — не выпирают за углы
-	local topMask=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=6,Position=UDim2.fromOffset(14,50),Size=UDim2.new(1,-28,0,10),Parent=content}); new("UIGradient",{Rotation=90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}),Parent=topMask})
-	local bottomMask=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=6,Position=UDim2.new(0,14,1,-34),Size=UDim2.new(1,-28,0,10),Parent=content}); new("UIGradient",{Rotation=-90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}),Parent=bottomMask})
+	-- [FIX] маски сдвинуты внутрь — не выпирают за углы
+	local topMask=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=6,Position=UDim2.fromOffset(16,50),Size=UDim2.new(1,-32,0,10),Parent=content}); new("UIGradient",{Rotation=90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}),Parent=topMask})
+	local bottomMask=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.25,BorderSizePixel=0,ZIndex=6,Position=UDim2.new(0,16,1,-34),Size=UDim2.new(1,-32,0,10),Parent=content}); new("UIGradient",{Rotation=-90,Transparency=NumberSequence.new({NumberSequenceKeypoint.new(0,0),NumberSequenceKeypoint.new(1,1)}),Parent=bottomMask})
 	local footer=new("CanvasGroup",{BackgroundTransparency=1,GroupTransparency=0,AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,0,1,0),Size=UDim2.new(1,0,0,24),Parent=content})
 	local keyHint=text({Text="",TextSize=9,TextColor3=T.Dim,Position=UDim2.fromOffset(14,0),Size=UDim2.new(1,-196,1,0),Parent=footer})
 	local pingLabel=text({Text="0 ms",TextSize=9,TextColor3=T.Dim,TextXAlignment=Enum.TextXAlignment.Right,AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-120,0,0),Size=UDim2.fromOffset(48,24),Parent=footer})
@@ -198,24 +229,24 @@ function CosmoLib:New(opts)
 	local sparkBars={}
 	for i=1,16 do local b=new("Frame",{BackgroundColor3=ACCENT,BackgroundTransparency=0.35,BorderSizePixel=0,AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,(i-1)*3,1,0),Size=UDim2.fromOffset(2,3),Parent=sparkBox}); corner(b,1); sparkBars[i]=b; accent(function(c) tween(b,0.35,nil,nil,{BackgroundColor3=c}) end) end
 	local fpsLabel=text({Text="60 fps",TextSize=9,TextColor3=T.Dim,TextXAlignment=Enum.TextXAlignment.Right,AnchorPoint=Vector2.new(1,0),Position=UDim2.new(1,-14,0,0),Size=UDim2.fromOffset(46,24),Parent=footer})
-	local grip=new("TextButton",{Text="",AutoButtonColor=false,BackgroundTransparency=1,ZIndex=9,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-2,1,-2),Size=UDim2.fromOffset(16,16),Parent=panel})
-	for i=1,3 do local l=new("Frame",{BackgroundColor3=T.Dim,BackgroundTransparency=0.4,BorderSizePixel=0,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-2,1,-2-(i-1)*4),Size=UDim2.fromOffset(3+(i-1)*4,1.4),Rotation=-45,Parent=grip}); corner(l,1) end
-	local blur=new("BlurEffect",{Name="CosmoBlur",Size=0,Parent=Lighting})
+	-- [FIX] grip утоплен глубже — линии не вылезают за скруглённый угол
+	local grip=new("TextButton",{Text="",AutoButtonColor=false,BackgroundTransparency=1,ZIndex=9,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-5,1,-5),Size=UDim2.fromOffset(16,16),Parent=panel})
+	for i=1,3 do local l=new("Frame",{BackgroundColor3=T.Dim,BackgroundTransparency=0.4,BorderSizePixel=0,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-1,1,-1-(i-1)*4),Size=UDim2.fromOffset(3+(i-1)*4,1.4),Rotation=-45,Parent=grip}); corner(l,1) end
+	-- [FIX] блюр удалён полностью
 	local cc=new("ColorCorrectionEffect",{Name="CosmoDim",Brightness=0,Saturation=0,Contrast=0,Parent=Lighting})
 	local toastBox=new("Frame",{Name="Toasts",BackgroundTransparency=1,AnchorPoint=Vector2.new(1,1),Position=UDim2.new(1,-18,1,-18),Size=UDim2.fromOffset(252,320),ZIndex=20,Parent=gui})
 	new("UIListLayout",{Padding=UDim.new(0,6),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Bottom,HorizontalAlignment=Enum.HorizontalAlignment.Right,Parent=toastBox})
 	local tooltip=new("CanvasGroup",{Name="Tooltip",BackgroundColor3=T.Bg,BackgroundTransparency=0.08,BorderSizePixel=0,GroupTransparency=1,Visible=false,ZIndex=40,AutomaticSize=Enum.AutomaticSize.X,Size=UDim2.fromOffset(0,22),Parent=gui}); corner(tooltip,6); stroke(tooltip,0.82,1); pad(tooltip,8,8,0,0)
 	local tooltipText=text({Text="",TextSize=10,TextColor3=T.Sub,AutomaticSize=Enum.AutomaticSize.X,TextTruncate=Enum.TextTruncate.None,Size=UDim2.fromOffset(0,22),Parent=tooltip})
-	-- [FIX] вотермарка: фикс. ширина + центрирование контента
-	local watermark=new("CanvasGroup",{Name="Watermark",BackgroundColor3=T.Panel,BackgroundTransparency=0.18,BorderSizePixel=0,GroupTransparency=1,Size=UDim2.fromOffset(252,26),Position=UDim2.fromOffset(18,18),ZIndex=15,Parent=gui}); corner(watermark,8); stroke(watermark,0.85,1)
+	local watermark=new("CanvasGroup",{Name="Watermark",BackgroundColor3=T.Panel,BackgroundTransparency=0.18,BorderSizePixel=0,GroupTransparency=1,Size=UDim2.fromOffset(252,28),Position=UDim2.fromOffset(18,18),ZIndex=15,Parent=gui}); corner(watermark,9); stroke(watermark,0.85,1)
 	new("UIListLayout",{FillDirection=Enum.FillDirection.Horizontal,Padding=UDim.new(0,7),SortOrder=Enum.SortOrder.LayoutOrder,VerticalAlignment=Enum.VerticalAlignment.Center,HorizontalAlignment=Enum.HorizontalAlignment.Center,Parent=watermark})
 	local wmFps,wmPing,wmTime
 	do
-		-- [COSMO] в вотермарке логотип вместо аватарки
-		local ah=new("Frame",{BackgroundColor3=T.Card,BackgroundTransparency=0.3,BorderSizePixel=0,Size=UDim2.fromOffset(18,18),LayoutOrder=1,Parent=watermark}); corner(ah,9)
-		local a=new("ImageLabel",{BackgroundTransparency=1,ImageTransparency=1,Image=LOGO_ID,ScaleType=Enum.ScaleType.Fit,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(0.8,0.8),Parent=ah})
+		-- [FIX] лого в вотермарке тоже крупнее (22px, картинка 92%)
+		local ah=new("Frame",{BackgroundColor3=T.Card,BackgroundTransparency=0.25,BorderSizePixel=0,Size=UDim2.fromOffset(22,22),LayoutOrder=1,Parent=watermark}); corner(ah,11)
+		local a=new("ImageLabel",{BackgroundTransparency=1,ImageTransparency=1,Image=LOGO_ID,ScaleType=Enum.ScaleType.Fit,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(0.92,0.92),Parent=ah})
 		task.spawn(function() pcall(function() ContentProvider:PreloadAsync({a}) end); if a.Parent then tween(a,0.5,nil,nil,{ImageTransparency=0}) end end)
-		local function wl(o,s,c,w) return text({Text=s,TextSize=10,TextColor3=c or T.Sub,LayoutOrder=o,Size=UDim2.fromOffset(w or 40,26),Parent=watermark}) end
+		local function wl(o,s,c,w) return text({Text=s,TextSize=10,TextColor3=c or T.Sub,LayoutOrder=o,Size=UDim2.fromOffset(w or 40,28),Parent=watermark}) end
 		local wn=wl(2,CONFIG.Title,T.Text,44); wn.Font=Enum.Font.GothamBold
 		wmFps=wl(4,"60 fps",T.Sub,44); wmPing=wl(6,"0 ms",T.Sub,42); wmTime=wl(8,"--:--:--",T.Dim,48)
 		local function wd(o) local d=new("Frame",{BackgroundColor3=ACCENT,BackgroundTransparency=0.3,BorderSizePixel=0,Size=UDim2.fromOffset(3,3),LayoutOrder=o,Parent=watermark}); corner(d,2); accent(function(c) tween(d,0.35,nil,nil,{BackgroundColor3=c}) end) end
@@ -226,11 +257,12 @@ function CosmoLib:New(opts)
 	local bindHudTitle=text({Text="KEYBINDS",TextSize=8,Font=Enum.Font.GothamBold,TextColor3=T.Dim,LayoutOrder=0,Size=UDim2.new(1,0,0,12),Parent=bindHud})
 	local touchBtn
 	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-		touchBtn=new("TextButton",{Text="",AutoButtonColor=false,BackgroundColor3=T.Panel,BackgroundTransparency=0.15,BorderSizePixel=0,AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,18,1,-80),Size=UDim2.fromOffset(44,44),ZIndex=18,Parent=gui}); corner(touchBtn,22); stroke(touchBtn,0.8,1.2,ACCENT)
-		local tl=new("Frame",{BackgroundColor3=ACCENT,BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(24,24),Parent=touchBtn}); corner(tl,7); new("UIGradient",{Rotation=45,Color=ColorSequence.new(ACCENT,ACCENT2),Parent=tl})
-		new("ImageLabel",{BackgroundTransparency=1,Image=LOGO_ID,ScaleType=Enum.ScaleType.Fit,ZIndex=2,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(0.8,0.8),Parent=tl})
+		touchBtn=new("TextButton",{Text="",AutoButtonColor=false,BackgroundColor3=T.Panel,BackgroundTransparency=0.15,BorderSizePixel=0,AnchorPoint=Vector2.new(0,1),Position=UDim2.new(0,18,1,-80),Size=UDim2.fromOffset(48,48),ZIndex=18,Parent=gui}); corner(touchBtn,24); stroke(touchBtn,0.8,1.2,ACCENT)
+		local tl=new("Frame",{BackgroundColor3=ACCENT,BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(30,30),Parent=touchBtn}); corner(tl,9); new("UIGradient",{Rotation=45,Color=ColorSequence.new(ACCENT,ACCENT2),Parent=tl})
+		new("ImageLabel",{BackgroundTransparency=1,Image=LOGO_ID,ScaleType=Enum.ScaleType.Fit,ZIndex=2,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromScale(0.9,0.9),Parent=tl})
 	end
 	local palette=new("CanvasGroup",{Name="Palette",BackgroundColor3=Color3.new(0,0,0),BackgroundTransparency=0.45,GroupTransparency=1,Visible=false,ZIndex=30,Size=UDim2.fromScale(1,1),Parent=panel})
+	corner(palette,RADIUS) -- [FIX] оверлей палитры скруглён как панель
 	local palBox=new("Frame",{BackgroundColor3=T.Panel,BackgroundTransparency=0.04,BorderSizePixel=0,ZIndex=2,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(320,224),Parent=palette}); corner(palBox,12); stroke(palBox,0.8,1.2)
 	local palScale=new("UIScale",{Scale=0.94,Parent=palBox})
 	local palHead=new("Frame",{BackgroundColor3=T.Bg,BackgroundTransparency=0.35,BorderSizePixel=0,Position=UDim2.fromOffset(10,10),Size=UDim2.new(1,-20,0,28),Parent=palBox}); corner(palHead,8)
@@ -259,8 +291,8 @@ function CosmoLib:New(opts)
 	local function centerPanel() local v=viewport(); targetPos=Vector2.new(v.X*0.5,v.Y*0.5) end
 	local function responsive() local v=viewport(); return clamp(math.min(v.X/1440,v.Y/900),0.78,1.1) end
 	local function panelHeight() return minimized and 46 or H end
-	-- [FIX] верхний край окна стоит на месте при сворачивании
-	local function collapseShift() return minimized and ((H-46)*0.5*uiScale.Scale) or 0 end
+	-- [FIX] панель и так растёт от своего верхнего края внутри постоянного root — сдвиг не нужен (0)
+	local function collapseShift() return 0 end
 	local function clickSound(f) if not CONFIG.Sounds then return end local s=Instance.new("Sound"); s.SoundId="rbxasset://sounds/electronicpingshort.wav"; s.Volume=0.22; s.PlaybackSpeed=f or 1.4; s.Parent=gui; s:Play(); Debris:AddItem(s,1) end
 	local function ripple(obj,color)
 		local r=new("Frame",{BackgroundColor3=color or T.White,BackgroundTransparency=0.86,BorderSizePixel=0,AnchorPoint=Vector2.new(0.5,0.5),Position=UDim2.fromScale(0.5,0.5),Size=UDim2.fromOffset(0,0),ZIndex=0,Parent=obj}); corner(r,999)
@@ -354,7 +386,7 @@ function CosmoLib:New(opts)
 	function Window:GetConfig()
 		local flags={}
 		for _,e in ipairs(controls) do if e.flag and e.serialize then local ok,v=pcall(e.serialize); if ok then flags[e.flag]=v end end end
-		return {name=CONFIG.Title,version=CONFIG.Version,flags=flags,ui={x=targetPos.X,y=targetPos.Y,w=W,h=H,moved=moved,scale=userScale,accent=toHex(ACCENT),accent2=toHex(ACCENT2),blur=CONFIG.Blur,sounds=CONFIG.Sounds,watermark=CONFIG.Watermark,bindhud=CONFIG.BindHud,motion=Anim.mul,reduce=Anim.off}}
+		return {name=CONFIG.Title,version=CONFIG.Version,flags=flags,ui={x=targetPos.X,y=targetPos.Y,w=W,h=H,moved=moved,scale=userScale,accent=toHex(ACCENT),accent2=toHex(ACCENT2),sounds=CONFIG.Sounds,watermark=CONFIG.Watermark,bindhud=CONFIG.BindHud,motion=Anim.mul,reduce=Anim.off}}
 	end
 	function Window:ApplyConfig(data)
 		if typeof(data)~="table" then return false end
@@ -366,7 +398,6 @@ function CosmoLib:New(opts)
 			if tonumber(ui.w) and tonumber(ui.h) then W=clamp(tonumber(ui.w),CONFIG.MinSize.X,CONFIG.MaxSize.X); H=clamp(tonumber(ui.h),CONFIG.MinSize.Y,CONFIG.MaxSize.Y); panel.Size=UDim2.fromOffset(W,panelHeight()); layoutShadows(panelHeight(),true); root.Size=UDim2.fromOffset(W+MARGIN*2,H+MARGIN*2) end
 			if tonumber(ui.scale) then Window:SetScale(clamp(tonumber(ui.scale),0.7,1.4)) end
 			if ui.moved and tonumber(ui.x) and tonumber(ui.y) then moved=true; targetPos=Vector2.new(ui.x,ui.y); curPos=targetPos end
-			if tonumber(ui.blur) then CONFIG.Blur=clamp(tonumber(ui.blur),0,24) end
 			if ui.sounds~=nil then CONFIG.Sounds=ui.sounds and true or false end
 			if ui.watermark~=nil then CONFIG.Watermark=ui.watermark and true or false end
 			if ui.bindhud~=nil then CONFIG.BindHud=ui.bindhud and true or false end
@@ -493,7 +524,6 @@ function CosmoLib:New(opts)
 			end
 			if Window._open then
 				local a=1-math.exp(-dt*19); local prev=curPos; curPos=curPos:Lerp(targetPos,a)
-				-- [FIX] при остановке — снап на целые пиксели и Rotation=0 (нет «мыла» после драга)
 				local moving=dragging or (targetPos-curPos).Magnitude>0.6
 				if moving then
 					root.Position=UDim2.fromOffset(curPos.X,curPos.Y+collapseShift())
@@ -528,31 +558,32 @@ function CosmoLib:New(opts)
 		if not moved then centerPanel() end
 		curPos=targetPos+Vector2.new(0,18); root.Rotation=0; uiScale.Scale=baseScale*0.93; root.GroupTransparency=1
 		tween(uiScale,0.45,Enum.EasingStyle.Back,nil,{Scale=baseScale}); tween(root,0.26,Enum.EasingStyle.Quad,nil,{GroupTransparency=0})
-		tween(blur,0.4,nil,nil,{Size=CONFIG.Blur}); tween(cc,0.4,nil,nil,{Brightness=-CONFIG.Dim*0.35,Saturation=-CONFIG.Dim})
+		tween(cc,0.4,nil,nil,{Brightness=-CONFIG.Dim*0.35,Saturation=-CONFIG.Dim})
 		stagger(activeTab); hideTooltip(); clickSound(1.6)
 	end
 	function Window:Close()
 		if not self._open then return end; self._open=false; dragging,resizing=false,false; closePalette(); hideTooltip()
 		tween(uiScale,0.2,Enum.EasingStyle.Quint,Enum.EasingDirection.In,{Scale=baseScale*0.96}); tween(root,0.18,Enum.EasingStyle.Quad,Enum.EasingDirection.In,{GroupTransparency=1})
-		tween(blur,0.3,nil,nil,{Size=0}); tween(cc,0.3,nil,nil,{Brightness=0,Saturation=0}); clickSound(1.1)
+		tween(cc,0.3,nil,nil,{Brightness=0,Saturation=0}); clickSound(1.1)
 		task.delay(0.24,function() if not Window._open then root.Visible=false end end)
 	end
 	function Window:Toggle() if self._open then self:Close() else self:Open() end end
 	function Window:SetMinimized(v)
 		minimized=v and true or false; local h=panelHeight()
+		-- [FIX] верхний край панели неподвижен: root не двигается, тени растут от верха
 		tween(panel,0.42,Enum.EasingStyle.Quint,nil,{Size=UDim2.fromOffset(W,h)}); layoutShadows(h)
-		-- [FIX] позиция компенсируется через collapseShift() — без рывка в центр
 		tween(footer,0.22,nil,nil,{GroupTransparency=minimized and 1 or 0}); tween(profile,0.22,nil,nil,{GroupTransparency=minimized and 1 or 0}); tween(tabsBox,0.22,nil,nil,{GroupTransparency=minimized and 1 or 0})
 		tween(topMask,0.22,nil,nil,{BackgroundTransparency=minimized and 1 or 0.25}); tween(bottomMask,0.22,nil,nil,{BackgroundTransparency=minimized and 1 or 0.25})
 		tween(miniIcon,0.35,Enum.EasingStyle.Quint,nil,{Rotation=minimized and 180 or 0})
-		if minimized then task.delay(0.3,function() if minimized then pagesBox.Visible=false end end) else pagesBox.Visible=true; stagger(activeTab) end
+		if minimized then closePalette(); task.delay(0.3,function() if minimized then pagesBox.Visible=false end end) else pagesBox.Visible=true; stagger(activeTab) end
 		clickSound(minimized and 1.2 or 1.5)
 	end
 	function Window:SetWatermark(on) CONFIG.Watermark=on and true or false; tween(watermark,0.3,nil,nil,{GroupTransparency=CONFIG.Watermark and 0 or 1}) end
 	function Window:Destroy()
 		if renderConn then renderConn:Disconnect(); renderConn=nil end
+		if camConn then pcall(function() camConn:Disconnect() end); camConn=nil end
 		for _,c in ipairs(conns) do pcall(function() c:Disconnect() end) end; table.clear(conns)
-		gui:Destroy(); blur:Destroy(); cc:Destroy(); _G.__CosmoUI=nil
+		gui:Destroy(); cc:Destroy(); _G.__CosmoUI=nil
 		if ActiveWindow==Window then ActiveWindow=nil end
 	end
 
@@ -575,13 +606,14 @@ function CosmoLib:New(opts)
 	connect(searchClear.MouseEnter,function() searchClearRecolor(T.Text) end)
 	connect(searchClear.MouseLeave,function() searchClearRecolor(T.Dim) end)
 	connect(searchClear.MouseButton1Click,function() searchInput.Text=""; searchClear.Visible=false; searchCount.Visible=true end)
-	connect(logoBtn.MouseEnter,function() tween(logoScale,0.3,Enum.EasingStyle.Back,nil,{Scale=1.15}); tween(logoBtn,0.35,nil,nil,{Rotation=90}) end)
+	connect(logoBtn.MouseEnter,function() tween(logoScale,0.3,Enum.EasingStyle.Back,nil,{Scale=1.12}); tween(logoBtn,0.35,nil,nil,{Rotation=90}) end)
 	connect(logoBtn.MouseLeave,function() tween(logoScale,0.35,Enum.EasingStyle.Back,nil,{Scale=1}); tween(logoBtn,0.45,Enum.EasingStyle.Quint,nil,{Rotation=0}) end)
-	-- [COSMO] случайный акцент теперь в голубо-синем диапазоне
+	-- [COSMO] случайный акцент в голубо-синем диапазоне
 	local function randomBlue() local c=Color3.fromHSV(0.53+math.random()*0.12,0.6+math.random()*0.15,1); local hh=Color3.toHSV(c); return c,Color3.fromHSV(clamp(hh+0.06,0.5,0.68),0.7,1) end
 	connect(logoBtn.MouseButton1Click,function() local c,c2=randomBlue(); Window:SetAccent(c,c2); ripple(logoBtn,T.White); Window:Notify("Акцент обновлён",toHex(c),"good",1.8) end)
-	connect(avatarHolder.MouseEnter,function() tween(avatarScale,0.3,Enum.EasingStyle.Back,nil,{Scale=1.12}); tween(avatarRing,0.25,nil,nil,{Transparency=0.15}) end)
-	connect(avatarHolder.MouseLeave,function() tween(avatarScale,0.35,Enum.EasingStyle.Back,nil,{Scale=1}); tween(avatarRing,0.3,nil,nil,{Transparency=0.55}) end)
+	-- [FIX] hover аватара: мягкий масштаб из центра, без обрезания
+	connect(avatarHolder.MouseEnter,function() tween(avatarScale,0.3,Enum.EasingStyle.Back,nil,{Scale=1.06}); tween(avatarRing,0.25,nil,nil,{Transparency=0.1}) end)
+	connect(avatarHolder.MouseLeave,function() tween(avatarScale,0.35,Enum.EasingStyle.Back,nil,{Scale=1}); tween(avatarRing,0.3,nil,nil,{Transparency=0.45}) end)
 	watermark.Active=true
 	connect(watermark.InputBegan,function(input) if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then wmDrag=true; wmStart=UserInputService:GetMouseLocation(); wmStartPos=Vector2.new(watermark.Position.X.Offset,watermark.Position.Y.Offset) end end)
 	if touchBtn then connect(touchBtn.MouseButton1Click,function() Window:Toggle() end) end
@@ -1049,7 +1081,6 @@ function CosmoLib:New(opts)
 		tween(pill,0.45,Enum.EasingStyle.Quint,nil,{Position=UDim2.fromOffset(0,(newIndex-1)*(TAB_H+TAB_GAP))})
 		tween(pillBar,0.4,Enum.EasingStyle.Back,nil,{Size=UDim2.fromOffset(3,19)}); task.delay(0.22,function() tween(pillBar,0.3,nil,nil,{Size=UDim2.fromOffset(3,15)}) end)
 		pageTitle.Text=tab.name
-		-- [FIX] подзаголовок только если задан; заголовок ровно по центру шапки
 		local hasSub=(tab.subtitle or "")~=""
 		pageSub.Visible=hasSub; pageSub.Text=tab.subtitle
 		local titleY=hasSub and 9 or 15
