@@ -13,7 +13,7 @@ local LocalPlayer=Players.LocalPlayer
 local PlayerGui=LocalPlayer:WaitForChild("PlayerGui")
 -- [COSMO] голубо-синяя палитра
 local T={Bg=Color3.fromRGB(10,15,26),Panel=Color3.fromRGB(16,23,38),Side=Color3.fromRGB(12,18,31),Card=Color3.fromRGB(30,43,66),Track=Color3.fromRGB(52,70,100),Text=Color3.fromRGB(235,243,255),Sub=Color3.fromRGB(140,160,190),Dim=Color3.fromRGB(96,114,144),White=Color3.fromRGB(255,255,255),Good=Color3.fromRGB(80,220,140),Warn=Color3.fromRGB(255,190,90),Bad=Color3.fromRGB(255,96,110)}
-local LOGO_ID="rbxassetid://125954321358941" -- [COSMO] логотип
+local LOGO_ID="rbxassetid://76881759796005" -- [COSMO] логотип
 local Anim={mul=1,off=false}
 local loops={}
 local activeTweens=setmetatable({},{__mode="k"})
